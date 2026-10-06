@@ -7,7 +7,7 @@ Details still TBD — ask user: name, format (jeopardy/AD), categories, team siz
 - Kali Linux, kernel 7.1.5, Intel Core Ultra 7 155H, 22 CPUs, 15 GiB RAM, 40 GB free on /, VT-x on.
 - Docker 29.8.2 (user in `docker` group; images: nginx:alpine). Docker Desktop also installed.
 - VirtualBox 7.2.16, existing VM `Seed-Ubuntu20.04`.
-- Tailscale in use. Another box at 100.110.185.112 (user ssh'es there as shadow_e15).
+- Tailscale in use. Host-specific addresses kept in `writeups/LOCAL.md` (gitignored).
 
 ## CTF toolchain — INSTALLED
 **Python venv `~/ctf-venv`** (activate: `source ~/ctf-venv/bin/activate`):

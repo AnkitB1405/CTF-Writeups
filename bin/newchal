@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# newchal <event/category> <challenge-name>  — scaffold a challenge writeup
+set -euo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[ $# -eq 2 ] || { echo "usage: newchal <event/category> <challenge-name>"; exit 1; }
+dir="$root/challenges/$1/$2"
+[ -e "$dir" ] && { echo "exists: $dir"; exit 1; }
+mkdir -p "$dir"
+sed "s/^# <Challenge Name>/# $2/" "$root/TEMPLATE.md" > "$dir/README.md"
+printf '#!/usr/bin/env python3\nfrom pwn import *\n\n' > "$dir/solve.py"
+chmod +x "$dir/solve.py"
+echo "$dir"

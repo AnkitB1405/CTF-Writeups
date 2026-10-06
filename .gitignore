@@ -1,0 +1,26 @@
+# local-only notes (host details, creds, tailnet addresses)
+reference/LOCAL.md
+
+# challenge artifacts — large, and often not ours to redistribute
+*.bin
+*.dd
+*.raw
+*.pcap
+*.pcapng
+*.sqlite
+*.kdbx
+*.jar
+*.apk
+core
+core.*
+
+# extraction noise
+_*.extracted/
+*.extracted/
+out/
+carved/
+__pycache__/
+*.pyc
+.venv/
+
+!writeups/**/exploit.py
