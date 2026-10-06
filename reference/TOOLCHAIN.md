@@ -32,12 +32,11 @@ john cracked a real zip, stegseek recovered a real passphrase, tesseract OCR'd r
 ghidra completed a headless import+analyze, tshark parsed a generated pcap, one_gadget found
 5 gadgets, radare2 analyzed a binary, vol lists 162 plugins, pwndbg loads.
 
-Outstanding fix — hashcat only:
-```bash
-sudo apt install libnvrtc12
-```
-hashcat detects the RTX 4050 but dies on `Failed to initialize NVIDIA RTC library`; NVRTC is
-absent and there is no CPU fallback device. Use `john` meanwhile.
+hashcat: **fixed and verified** 2026-10-06 via `libnvrtc12`. Cracks MD5/SHA1/SHA256/NTLM on
+GPU at 20.8 GH/s (MD5), plus mask (`-a 3`) and rules (`-r`). Note `best64.rule` is john's;
+hashcat ships `best66.rule`, which is too small — use `rockyou-30000.rule`. John's rule files
+are not hashcat-compatible (silently `Exhausted`). `nvmlDeviceGetFanSpeed` and `CUDA SDK
+Toolkit not installed` warnings are cosmetic.
 
 `xxd`: the apt package does not work here. busybox implements xxd (with `-r`/`-p`), so
 `~/bin/xxd -> /usr/bin/busybox` provides it — busybox dispatches on `argv[0]`, so it works in

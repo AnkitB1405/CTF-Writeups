@@ -20,15 +20,32 @@ Docs home: `~/Cryovault/writeups/` (symlink `~/Cryovault` → `~/CTF/Cryovault`)
 `pwndbg` · `pwn checksec` · the `~/ctf-venv` stack (pwntools, z3, gmpy2, pycryptodome, scapy).
 All six `*2john` converters present: zip/ssh/pdf/rar/office/keepass.
 
-### RUN THIS — fixes hashcat and installs xxd
-```bash
-sudo apt install -y libnvrtc12 && sudo ln -sf /usr/bin/busybox /usr/local/bin/xxd
-```
-`hashcat` detects the RTX 4050 but dies with `Failed to initialize NVIDIA RTC library`. The
-driver and `libcuda.so.1` are present; NVRTC (the runtime kernel compiler hashcat needs to
-build its kernels) is not, and no CPU fallback device is registered — so it currently has zero
-usable backends. **Until this is installed, use `john`** — it works, it is CPU-based, and it
-owns every `*2john` format anyway.
+### hashcat — fixed and verified (2026-10-06)
+`libnvrtc12` resolved it. Cracked real hashes on the GPU in every mode tested:
+
+| Mode | Algorithm | Result |
+|---|---|---|
+| `-m 0` | MD5 | ✅ cracked |
+| `-m 100` | SHA1 | ✅ cracked |
+| `-m 1400` | SHA256 | ✅ cracked |
+| `-m 1000` | NTLM | ✅ cracked (the mode `vol windows.hashdump` feeds) |
+| `-a 3` | mask attack | ✅ cracked `?l?l?l?d?d?d` |
+| `-r` | rules engine | ✅ cracked |
+
+**20.8 GH/s on MD5** — real GPU work (CPU would be ~0.5 GH/s).
+
+Two gotchas found while testing:
+
+- **Rule paths:** `best64.rule` is **john's**, at `/usr/share/john/rules/`. hashcat ships
+  `best66.rule` instead — and `best66` is small and missed a plain `password` → `Password1`.
+  **Use `rockyou-30000.rule`**, which caught it. `d3ad0ne`, `dive` and `generated2` also work.
+  Do **not** feed john's `.rule` files to hashcat: the syntaxes differ, hashcat silently skips
+  what it can't parse and reports `Exhausted` with nothing cracked.
+- **Harmless warnings:** `nvmlDeviceGetFanSpeed(): Not Supported` (laptop GPU) and
+  `CUDA SDK Toolkit not installed` both appear but do not affect cracking — full speed confirmed.
+  Installing `nvidia-cuda-toolkit` silences the second one; not worth the ~2 GB.
+- **john needs a seekable wordlist file.** `--wordlist=<(printf ...)` fails with
+  `ftell: Illegal seek`. Pass a real file.
 
 ### `xxd` — use the busybox build
 The `xxd` apt package does not work on this box. **busybox implements xxd** and is already
@@ -338,7 +355,7 @@ hashcat -m 0 hash.txt rockyou.txt               # 0=MD5 100=SHA1 1400=SHA256
 hashcat -m 1000 ntlm.txt rockyou.txt            # 1000=NTLM 1800=sha512crypt
 hashcat -m 0 -a 3 hash.txt '?l?l?l?l?d?d'       # mask: 4 lower + 2 digits
 hashcat --identify hash.txt                     # what mode is this?
-hashcat -m 0 hash.txt rockyou.txt -r /usr/share/hashcat/rules/best64.rule
+hashcat -m 0 hash.txt rockyou.txt -r /usr/share/hashcat/rules/rockyou-30000.rule
 
 fcrackzip -u -D -p rockyou.txt secret.zip       # -u verifies, -D dictionary
 pdfcrack -f file.pdf -w rockyou.txt
