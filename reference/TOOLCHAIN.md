@@ -26,18 +26,30 @@ pdftotext, imagemagick (convert), go, cargo, node, java, tmux, git, curl, wget.
 
 **pipx (OSINT)**: ghunt, maigret, sherlock-project, socid-extractor, user-scanner, headroom-ai.
 
-## GAPS (not installed as of 2026-10-05)
-Priority for the 4 announced waves (web+crypto / net-forensics+rev / binexp / ?):
-1. `john` (jumbo) + `hashcat` — password cracking; zip2john/ssh2john etc. **high value, likely needed**
-2. `tshark` — CLI pcap analysis (only wireshark GUI present; tshark is a separate pkg) **high**
-3. `ghidra` + `radare2` — static RE / decompiler for Wave 2 rev **high**
-4. `volatility3` — memory forensics
-5. `qemu-user-static` + `binfmt-support` — run ARM/MIPS challenge binaries (also makes Docker multi-arch work)
-6. `one_gadget` (gem) — pwn ret2libc
-7. `z3-solver`, `gmpy2`, `primefac`, `libnum`, `sympy` in ~/ctf-venv — crypto/rev solving
-8. `fcrackzip`, `pdfcrack`, `stegseek` — archive/stego brute force
-9. `xxd` (vim-common), `tesseract-ocr` — hex editing, OCR for stego/misc
-10. Optional: `sagemath` (heavy, ~2 GB; only if hard crypto), `apktool`+`jadx` (Android), `RsaCtfTool`
+## Verification pass 2026-10-06
+Everything from the install list is present and functionally tested (not just `command -v`):
+john cracked a real zip, stegseek recovered a real passphrase, tesseract OCR'd real text,
+ghidra completed a headless import+analyze, tshark parsed a generated pcap, one_gadget found
+5 gadgets, radare2 analyzed a binary, vol lists 162 plugins, pwndbg loads.
+
+Three defects found and the fix:
+```bash
+sudo apt install xxd libnvrtc12 qemu-user
+```
+- `xxd` split out of `vim-common` into its own package on Debian 13.
+- `hashcat` detects the RTX 4050 but dies on `Failed to initialize NVIDIA RTC library`;
+  NVRTC is absent and there is no CPU fallback device. Use `john` meanwhile.
+- `qemu-user-static` is a transitional stub here; apt satisfied it with `qemu-user:i386`, so
+  `/usr/bin/qemu-aarch64-static` dangles and aarch64 never registered with binfmt. Confirmed by
+  `docker run --platform linux/arm64` returning `exec format error`.
+
+Fixed during the pass: `~/.docker/config.json` had `credsStore: desktop` with no such helper on
+the system, so **every `docker pull` failed**. Key removed (`auths` was empty); pulls verified
+working. Backup: `~/.docker/config.json.bak-2026-10-06`.
+
+Ghidra's launcher on Kali is **`ghidra`**, not `ghidraRun`. Headless:
+`/usr/share/ghidra/support/analyzeHeadless <projdir> <projname> -import <binary>`.
+
 
 ## VM vs Docker — decision
 Host is already Kali, so Docker covers almost everything:

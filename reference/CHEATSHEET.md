@@ -13,14 +13,32 @@ Docs home: `~/Cryovault/writeups/` (symlink `~/Cryovault` → `~/CTF/Cryovault`)
 `nmap` `wireshark`(GUI) `binwalk` `foremost` `exiftool` `steghide` `zsteg`
 `strace` `ltrace` `nc` `socat` `openssl` `7z` `hexdump` `jq` `pdftotext` `convert` `gcc`
 
-### STILL MISSING — step 2 did not run
+### Verified working (functionally tested 2026-10-06)
+`john` (cracked a real zip) · `hashcat` (binary ok, see GPU note) · `tshark` · `radare2` ·
+`ghidra` (headless analyze ok) · `stegseek` (found a real passphrase) · `fcrackzip` · `pdfcrack` ·
+`tesseract` (OCR'd real text) · `vol` (162 plugins) · `one_gadget` (5 gadgets on libc) ·
+`pwndbg` · `pwn checksec` · the `~/ctf-venv` stack (pwntools, z3, gmpy2, pycryptodome, scapy).
+All six `*2john` converters present: zip/ssh/pdf/rar/office/keepass.
+
+### THREE FIXES STILL NEEDED
 ```bash
-echo 'wireshark-common wireshark-common/install-setuid boolean true' | sudo debconf-set-selections
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  john hashcat tshark radare2 ghidra qemu-user-static binfmt-support \
-  fcrackzip pdfcrack stegseek vim-common tesseract-ocr
+sudo apt install xxd libnvrtc12 qemu-user
 ```
-Without these you have **no password cracking, no CLI pcap tool, no decompiler, no OCR**.
+1. **`xxd` is missing** — it split out of `vim-common` into its own package on Debian 13.
+2. **`hashcat` cannot run** — it detects the RTX 4050 but fails with
+   `Failed to initialize NVIDIA RTC library`. The driver and `libcuda.so.1` are present;
+   NVRTC (the runtime kernel compiler) is not, and there is no CPU fallback device.
+   `libnvrtc12` fixes it. **Until then, use `john` — it works and is CPU-based.**
+3. **ARM/MIPS emulation is broken.** `qemu-user-static` is a transitional stub on Debian 13;
+   apt satisfied it with `qemu-user:i386`, so `/usr/bin/qemu-aarch64-static` is a **dangling
+   symlink** and only 32-bit targets registered with binfmt. `qemu-user` (amd64) fixes both.
+   The install removes the three broken i386 packages — that is the fix, not collateral damage.
+
+### Already fixed
+**Docker could not pull any image.** `~/.docker/config.json` had `credsStore: desktop` but
+`docker-credential-desktop` does not exist on this system (Docker Desktop's helper never
+landed). Every `docker pull` died with `error getting credentials`. The key is removed
+(`auths` was empty, so nothing was lost) and pulls work. Backup at `config.json.bak-2026-10-06`.
 
 ### Always start here
 ```bash
@@ -324,7 +342,9 @@ strings chal | grep -iE 'flag|pass|key'
 ltrace ./chal                    # often reveals the comparison outright
 strace -f ./chal 2>&1 | grep -E 'open|read'
 
-# ghidra: ghidraRun -> new project -> import -> double-click -> auto-analyze
+# ghidra: run `ghidra` -> new project -> import -> double-click -> auto-analyze
+#   launcher is `ghidra` on Kali (/usr/bin/ghidra -> ghidraRun). Headless:
+#   /usr/share/ghidra/support/analyzeHeadless <projdir> <projname> -import <binary>
 #   then navigate to main in the Symbol Tree, read the Decompile pane.
 #   rename variables as you understand them (L key) — makes the C readable fast.
 
@@ -589,7 +609,7 @@ source ~/ctf-venv/bin/activate                # muscle memory
 docker pull ubuntu:20.04 ubuntu:22.04         # no bandwidth on the day
 sudo tar -xzf /opt/SecLists/Passwords/Leaked-Databases/rockyou.txt.tar.gz \
   -C /opt/SecLists/Passwords/Leaked-Databases/   # ships as tar.gz, extract ONCE before the event
-ghidraRun                                     # first launch is slow, do it now
+ghidra                                        # launcher is `ghidra`, NOT `ghidraRun` (first launch is slow, do it now)
 ```
 
 **During:** one directory per challenge, `notes.md` in each, write the flag down the moment
