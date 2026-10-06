@@ -1,93 +1,31 @@
-# CTF Toolkit — Use Cases & Cheatsheet
-Host: Kali (kernel 7.1.5), 22 CPU, 15 GiB RAM, Docker + VirtualBox. Written 2026-10-06.  
-Docs home: `~/Cryovault/writeups/` (symlink `~/Cryovault` → `~/CTF/Cryovault`).
+# CTF Cheatsheet — Commands by Category
+A command reference for jeopardy-style CTFs, organised by the order you reach for things.
 
 ---
 
-## 0. STATUS — read this first
-
-### Installed & verified
-`pwntools` `ROPGadget` `capstone` `unicorn` `pycryptodome` `cryptography` `scapy` `pillow`
-`z3` `gmpy2` `primefac` `libnum` `sympy`  ← all inside `~/ctf-venv`
-`gdb`+`pwndbg` `one_gadget` `vol`(volatility3) `gobuster` `ffuf` `sqlmap` `burpsuite`
-`nmap` `wireshark`(GUI) `binwalk` `foremost` `exiftool` `steghide` `zsteg`
-`strace` `ltrace` `nc` `socat` `openssl` `7z` `hexdump` `jq` `pdftotext` `convert` `gcc`
-
-### Verified working (functionally tested 2026-10-06)
-`john` (cracked a real zip) · `hashcat` (binary ok, see GPU note) · `tshark` · `radare2` ·
-`ghidra` (headless analyze ok) · `stegseek` (found a real passphrase) · `fcrackzip` · `pdfcrack` ·
-`tesseract` (OCR'd real text) · `vol` (162 plugins) · `one_gadget` (5 gadgets on libc) ·
-`pwndbg` · `pwn checksec` · the `~/ctf-venv` stack (pwntools, z3, gmpy2, pycryptodome, scapy).
-All six `*2john` converters present: zip/ssh/pdf/rar/office/keepass.
-
-### hashcat — fixed and verified (2026-10-06)
-`libnvrtc12` resolved it. Cracked real hashes on the GPU in every mode tested:
-
-| Mode | Algorithm | Result |
-|---|---|---|
-| `-m 0` | MD5 | ✅ cracked |
-| `-m 100` | SHA1 | ✅ cracked |
-| `-m 1400` | SHA256 | ✅ cracked |
-| `-m 1000` | NTLM | ✅ cracked (the mode `vol windows.hashdump` feeds) |
-| `-a 3` | mask attack | ✅ cracked `?l?l?l?d?d?d` |
-| `-r` | rules engine | ✅ cracked |
-
-**20.8 GH/s on MD5** — real GPU work (CPU would be ~0.5 GH/s).
-
-Two gotchas found while testing:
-
-- **Rule paths:** `best64.rule` is **john's**, at `/usr/share/john/rules/`. hashcat ships
-  `best66.rule` instead — and `best66` is small and missed a plain `password` → `Password1`.
-  **Use `rockyou-30000.rule`**, which caught it. `d3ad0ne`, `dive` and `generated2` also work.
-  Do **not** feed john's `.rule` files to hashcat: the syntaxes differ, hashcat silently skips
-  what it can't parse and reports `Exhausted` with nothing cracked.
-- **Harmless warnings:** `nvmlDeviceGetFanSpeed(): Not Supported` (laptop GPU) and
-  `CUDA SDK Toolkit not installed` both appear but do not affect cracking — full speed confirmed.
-  Installing `nvidia-cuda-toolkit` silences the second one; not worth the ~2 GB.
-- **john needs a seekable wordlist file.** `--wordlist=<(printf ...)` fails with
-  `ftell: Illegal seek`. Pass a real file.
-
-### `xxd` — use the busybox build
-The `xxd` apt package does not work on this box. **busybox implements xxd** and is already
-installed, including the flags that matter (`-r`, `-p`, `-g`, `-c`, `-l`, `-s`).
-
-Wired up as a real `xxd` via `/usr/local/bin/xxd -> /usr/bin/busybox`. busybox dispatches on
-`argv[0]`, and `/usr/local/bin` is on the default PATH for *every* shell including
-non-interactive ones, so this works inside scripts and `sudo` too. Every `xxd` command in this
-cheatsheet works unchanged.
-
-(There is also a `~/bin/xxd` symlink plus `~/bin` on PATH from `~/.zshrc` — that covers
-interactive use on its own, but a bare script run with a clean environment would miss it, hence
-the `/usr/local/bin` one.)
-
-Verified: dump, `-p` plain hex, `-r -p` reverse round-trip byte-identical, `-l`/`-s`
-length+skip, and the header-patch workflow below.
+## 0. Before you start
 
 ```bash
-xxd file | head -3                       # dump
-xxd -p file                              # plain hex, one stream
-xxd -p file | xxd -r -p > copy           # round-trip
-xxd -p bad.png | sed 's/^42414421/89504e47/' | xxd -r -p > fixed.png   # patch magic bytes
-```
-Raw busybox also works if PATH is ever not set up: `busybox xxd -p file`.
-
-### ARM/MIPS emulation — deliberately skipped
-`qemu-user` is **not** installed and is not needed for this CTF. `/usr/bin/qemu-*-static` are
-dangling symlinks left by a transitional package; ignore them. If a non-x86 binary ever does
-turn up, `sudo apt install qemu-user` is the fix (it replaces the broken i386 packages).
-
-### Already fixed
-**Docker could not pull any image.** `~/.docker/config.json` had `credsStore: desktop` but
-`docker-credential-desktop` does not exist on this system (Docker Desktop's helper never
-landed). Every `docker pull` died with `error getting credentials`. The key is removed
-(`auths` was empty, so nothing was lost) and pulls work. Backup at `config.json.bak-2026-10-06`.
-
-### Always start here
-```bash
-source ~/ctf-venv/bin/activate     # pwntools, z3, crypto libs live here
+source ~/ctf-venv/bin/activate     # pwntools, z3 and the crypto libs live in the venv
 ```
 
----
+For what each tool *is* and when to reach for it, see [TOOLCHAIN.md](TOOLCHAIN.md); this file is
+the command reference. Install lines are in TOOLCHAIN.md too.
+
+A few quirks worth knowing before they cost you time:
+
+- **`pwn checksec <bin>`** replaces the standalone `checksec`. `pwn cyclic` and `pwn template`
+  are also part of pwntools.
+- **`xxd` missing or broken?** busybox implements it — `busybox xxd` supports `-r -p -g -c -l -s`.
+  A symlink named `xxd` pointing at `/usr/bin/busybox` behaves as the real thing, because busybox
+  dispatches on `argv[0]`.
+- **john needs a seekable wordlist file** — process substitution fails with `ftell: Illegal seek`.
+- **hashcat on NVIDIA needs `libnvrtc12`**, not just the driver, or it detects the GPU and then
+  dies with `Failed to initialize NVIDIA RTC library`.
+- **Ghidra's launcher on Kali is `ghidra`**, not `ghidraRun`.
+- **Docker Desktop leftovers break `docker pull`** — a `credsStore: desktop` key in
+  `~/.docker/config.json` with no such helper makes every pull fail on `error getting
+  credentials`. Remove the key if `auths` is empty.
 
 ## 1. TRIAGE — every challenge starts here
 
@@ -470,9 +408,14 @@ io.interactive()                            # drop to the shell
 **Format string:** `%p %p %p` to leak the stack, `%7$s` to read an arg, `%n` to write.
 `fmtstr_payload(offset, {addr: value})` in pwntools builds it for you.
 
-**Non-x86 binary:** not supported on this box by choice — `qemu-user` is not installed.
-`file chal` will say e.g. `ARM aarch64`. If one appears, `sudo apt install qemu-user` then
-`qemu-aarch64-static ./chal`.
+**Non-x86 binary:** `file chal` will say e.g. `ARM aarch64`. Needs `qemu-user` (on Debian 13
+`qemu-user-static` is a transitional stub — if `/usr/bin/qemu-*-static` dangle, install
+`qemu-user`):
+```bash
+qemu-aarch64-static ./chal                   # run it
+qemu-aarch64-static -g 1234 ./chal           # then gdb-multiarch, target remote :1234
+docker run --rm -it --platform linux/arm64 -v "$PWD:/w" -w /w ubuntu:22.04 ./chal
+```
 
 ---
 
@@ -642,11 +585,10 @@ Then `triage mystery.bin` on anything new. (`mkdir -p ~/bin` first; add to PATH 
 
 **Before the event:**
 ```bash
-source ~/ctf-venv/bin/activate                # muscle memory
-docker pull ubuntu:20.04 ubuntu:22.04         # no bandwidth on the day
-sudo tar -xzf /opt/SecLists/Passwords/Leaked-Databases/rockyou.txt.tar.gz \
-  -C /opt/SecLists/Passwords/Leaked-Databases/   # ships as tar.gz, extract ONCE before the event
-ghidra                                        # launcher is `ghidra`, NOT `ghidraRun` (first launch is slow, do it now)
+source ~/ctf-venv/bin/activate                 # make it muscle memory
+docker pull ubuntu:20.04 && docker pull ubuntu:22.04 && docker pull ubuntu:24.04
+# extract rockyou once — it ships as a .tar.gz in SecLists
+ghidra                                         # first launch is slow; get it over with
 ```
 
 **During:** one directory per challenge, `notes.md` in each, write the flag down the moment

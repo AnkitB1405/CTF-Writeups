@@ -53,7 +53,7 @@ teaches nothing six months later; the reason I spent 90 minutes on the wrong the
 │
 ├── reference/
 │   ├── CHEATSHEET.md         full command reference, every category
-│   └── TOOLCHAIN.md          my environment and what's installed
+│   └── TOOLCHAIN.md          what each tool is and when to reach for it
 │
 ├── TEMPLATE.md               the standard writeup format
 └── bin/newchal               scaffolds a new challenge directory
@@ -66,6 +66,7 @@ teaches nothing six months later; the reason I spent 90 minutes on the wrong the
 | If you want… | Go to |
 |---|---|
 | The command reference | [reference/CHEATSHEET.md](reference/CHEATSHEET.md) |
+| Which tool to use, and why | [reference/TOOLCHAIN.md](reference/TOOLCHAIN.md) |
 | A vulnerability explained | [notes/](notes/) |
 | A worked challenge | [challenges/](challenges/) |
 | The biggest lesson in the repo | [Pickle Rick — confirmation bias](challenges/THM/pickle-rick/README.md#-the-biggest-mistake--and-it-wasnt-technical) |
