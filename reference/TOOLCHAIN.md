@@ -32,16 +32,20 @@ john cracked a real zip, stegseek recovered a real passphrase, tesseract OCR'd r
 ghidra completed a headless import+analyze, tshark parsed a generated pcap, one_gadget found
 5 gadgets, radare2 analyzed a binary, vol lists 162 plugins, pwndbg loads.
 
-Three defects found and the fix:
+Outstanding fix — hashcat only:
 ```bash
-sudo apt install xxd libnvrtc12 qemu-user
+sudo apt install libnvrtc12
 ```
-- `xxd` split out of `vim-common` into its own package on Debian 13.
-- `hashcat` detects the RTX 4050 but dies on `Failed to initialize NVIDIA RTC library`;
-  NVRTC is absent and there is no CPU fallback device. Use `john` meanwhile.
-- `qemu-user-static` is a transitional stub here; apt satisfied it with `qemu-user:i386`, so
-  `/usr/bin/qemu-aarch64-static` dangles and aarch64 never registered with binfmt. Confirmed by
-  `docker run --platform linux/arm64` returning `exec format error`.
+hashcat detects the RTX 4050 but dies on `Failed to initialize NVIDIA RTC library`; NVRTC is
+absent and there is no CPU fallback device. Use `john` meanwhile.
+
+`xxd`: the apt package does not work here. busybox implements xxd (with `-r`/`-p`), so
+`~/bin/xxd -> /usr/bin/busybox` provides it — busybox dispatches on `argv[0]`, so it works in
+scripts too. `~/bin` added to PATH in `~/.zshrc` (backup `.zshrc.bak-2026-10-06`).
+
+ARM/MIPS emulation: **deliberately not installed.** `qemu-user-static` here is a transitional
+stub whose `/usr/bin/qemu-*-static` symlinks dangle; not needed for this CTF. If ever required:
+`sudo apt install qemu-user`.
 
 Fixed during the pass: `~/.docker/config.json` had `credsStore: desktop` with no such helper on
 the system, so **every `docker pull` failed**. Key removed (`auths` was empty); pulls verified

@@ -20,19 +20,44 @@ Docs home: `~/Cryovault/writeups/` (symlink `~/Cryovault` → `~/CTF/Cryovault`)
 `pwndbg` · `pwn checksec` · the `~/ctf-venv` stack (pwntools, z3, gmpy2, pycryptodome, scapy).
 All six `*2john` converters present: zip/ssh/pdf/rar/office/keepass.
 
-### THREE FIXES STILL NEEDED
+### RUN THIS — fixes hashcat and installs xxd
 ```bash
-sudo apt install xxd libnvrtc12 qemu-user
+sudo apt install -y libnvrtc12 && sudo ln -sf /usr/bin/busybox /usr/local/bin/xxd
 ```
-1. **`xxd` is missing** — it split out of `vim-common` into its own package on Debian 13.
-2. **`hashcat` cannot run** — it detects the RTX 4050 but fails with
-   `Failed to initialize NVIDIA RTC library`. The driver and `libcuda.so.1` are present;
-   NVRTC (the runtime kernel compiler) is not, and there is no CPU fallback device.
-   `libnvrtc12` fixes it. **Until then, use `john` — it works and is CPU-based.**
-3. **ARM/MIPS emulation is broken.** `qemu-user-static` is a transitional stub on Debian 13;
-   apt satisfied it with `qemu-user:i386`, so `/usr/bin/qemu-aarch64-static` is a **dangling
-   symlink** and only 32-bit targets registered with binfmt. `qemu-user` (amd64) fixes both.
-   The install removes the three broken i386 packages — that is the fix, not collateral damage.
+`hashcat` detects the RTX 4050 but dies with `Failed to initialize NVIDIA RTC library`. The
+driver and `libcuda.so.1` are present; NVRTC (the runtime kernel compiler hashcat needs to
+build its kernels) is not, and no CPU fallback device is registered — so it currently has zero
+usable backends. **Until this is installed, use `john`** — it works, it is CPU-based, and it
+owns every `*2john` format anyway.
+
+### `xxd` — use the busybox build
+The `xxd` apt package does not work on this box. **busybox implements xxd** and is already
+installed, including the flags that matter (`-r`, `-p`, `-g`, `-c`, `-l`, `-s`).
+
+Wired up as a real `xxd` via `/usr/local/bin/xxd -> /usr/bin/busybox`. busybox dispatches on
+`argv[0]`, and `/usr/local/bin` is on the default PATH for *every* shell including
+non-interactive ones, so this works inside scripts and `sudo` too. Every `xxd` command in this
+cheatsheet works unchanged.
+
+(There is also a `~/bin/xxd` symlink plus `~/bin` on PATH from `~/.zshrc` — that covers
+interactive use on its own, but a bare script run with a clean environment would miss it, hence
+the `/usr/local/bin` one.)
+
+Verified: dump, `-p` plain hex, `-r -p` reverse round-trip byte-identical, `-l`/`-s`
+length+skip, and the header-patch workflow below.
+
+```bash
+xxd file | head -3                       # dump
+xxd -p file                              # plain hex, one stream
+xxd -p file | xxd -r -p > copy           # round-trip
+xxd -p bad.png | sed 's/^42414421/89504e47/' | xxd -r -p > fixed.png   # patch magic bytes
+```
+Raw busybox also works if PATH is ever not set up: `busybox xxd -p file`.
+
+### ARM/MIPS emulation — deliberately skipped
+`qemu-user` is **not** installed and is not needed for this CTF. `/usr/bin/qemu-*-static` are
+dangling symlinks left by a transitional package; ignore them. If a non-x86 binary ever does
+turn up, `sudo apt install qemu-user` is the fix (it replaces the broken i386 packages).
 
 ### Already fixed
 **Docker could not pull any image.** `~/.docker/config.json` had `credsStore: desktop` but
@@ -387,7 +412,6 @@ Java `.jar`/`.class` → `jadx` or `cfr`. Android `.apk` → `apktool d` then `j
 | `pwntools` | Write the exploit. Process/remote I/O, packing, ROP, shellcode. |
 | `ROPgadget` | Find gadgets for a ROP chain. |
 | `one_gadget` | Find a one-shot `execve("/bin/sh")` inside libc. |
-| `qemu-user-static` | Run an ARM/MIPS challenge binary on x86. |
 | `pwn checksec` | Which protections are on — decides your whole approach. |
 
 ```bash
@@ -429,13 +453,9 @@ io.interactive()                            # drop to the shell
 **Format string:** `%p %p %p` to leak the stack, `%7$s` to read an arg, `%n` to write.
 `fmtstr_payload(offset, {addr: value})` in pwntools builds it for you.
 
-**Non-x86 binary:**
-```bash
-file chal                                    # "ARM aarch64"
-qemu-aarch64-static ./chal                   # run it directly
-qemu-aarch64-static -g 1234 ./chal           # then gdb-multiarch, target remote :1234
-docker run --rm -it --platform linux/arm64 -v "$PWD:/w" -w /w ubuntu:22.04 ./chal
-```
+**Non-x86 binary:** not supported on this box by choice — `qemu-user` is not installed.
+`file chal` will say e.g. `ARM aarch64`. If one appears, `sudo apt install qemu-user` then
+`qemu-aarch64-static ./chal`.
 
 ---
 
