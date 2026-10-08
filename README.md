@@ -53,7 +53,10 @@ teaches nothing six months later; the reason I spent 90 minutes on the wrong the
 │
 ├── reference/
 │   ├── CHEATSHEET.md         full command reference, every category
-│   └── TOOLCHAIN.md          what each tool is and when to reach for it
+│   ├── TOOLCHAIN.md          what each tool is and when to reach for it
+│   └── SCRIPTS.md            the helper scripts in bin/, explained
+│
+├── bin/                      helper scripts — decode, pcaptri, binfirst, xorbrute, flaggrep
 │
 ├── TEMPLATE.md               the standard writeup format
 └── bin/newchal               scaffolds a new challenge directory
@@ -67,6 +70,7 @@ teaches nothing six months later; the reason I spent 90 minutes on the wrong the
 |---|---|
 | The command reference | [reference/CHEATSHEET.md](reference/CHEATSHEET.md) |
 | Which tool to use, and why | [reference/TOOLCHAIN.md](reference/TOOLCHAIN.md) |
+| The helper scripts | [reference/SCRIPTS.md](reference/SCRIPTS.md) |
 | A vulnerability explained | [notes/](notes/) |
 | A worked challenge | [challenges/](challenges/) |
 | The biggest lesson in the repo | [Pickle Rick — confirmation bias](challenges/THM/pickle-rick/README.md#-the-biggest-mistake--and-it-wasnt-technical) |
@@ -116,6 +120,12 @@ Kept deliberately boring so the repo stays searchable a year from now.
 - **Unsolved challenges still get a page.** `Status: unsolved` plus the reasoning beats no file.
 - **Challenge binaries and pcaps are gitignored** — large, and often not mine to redistribute.
   The writeup and the solve are the artifacts worth keeping.
+
+### Helper scripts
+
+[`bin/`](bin/) holds five CTF helpers — `decode`, `pcaptri`, `binfirst`, `xorbrute`,
+`flaggrep`. Python 3 stdlib only, each with a `--selftest`.
+Explained in [reference/SCRIPTS.md](reference/SCRIPTS.md).
 
 ### Adding a challenge
 

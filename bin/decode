@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""decode — throw a blob at every common encoding, print what comes out readable.
+
+Usage:
+  decode 'ZmxhZ3toaX0='          # literal argument
+  decode -f blob.txt             # from a file
+  cat blob | decode              # from stdin
+  decode -d 3 'Vm0...'           # recurse up to 3 layers
+  decode -a 'blob'               # show every result, not just the readable ones
+"""
+import argparse, base64, binascii, codecs, re, sys, urllib.parse, zlib
+
+# Two patterns on purpose:
+#   STRICT = a recognised CTF prefix. Only this earns a "<<< FLAG" marker, because a loose
+#            word{...} shape matches constantly in XOR/rot noise and the marker becomes useless.
+#   LOOSE  = any word{...}. Used only to nudge ranking, so a novel prefix still floats up.
+STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|layer8|cryovault|key|secret)'
+                    rb'\{[\x20-\x7e]{3,80}\}')
+LOOSE = re.compile(rb'\b[A-Za-z][A-Za-z0-9_]{1,11}\{[\x20-\x7e]{3,80}\}')
+# how much of the output must be printable ASCII before it is worth showing
+THRESHOLD = 0.85
+
+
+def printable_ratio(b: bytes) -> float:
+    if not b:
+        return 0.0
+    ok = sum(1 for c in b if 32 <= c < 127 or c in (9, 10, 13))
+    return ok / len(b)
+
+
+def _b64(s: bytes) -> bytes:
+    s = re.sub(rb'[^A-Za-z0-9+/=_-]', b'', s)
+    s = s.replace(b'-', b'+').replace(b'_', b'/')   # url-safe alphabet
+    s += b'=' * (-len(s) % 4)                        # restore stripped padding
+    return base64.b64decode(s, validate=False)
+
+
+def _b32(s: bytes) -> bytes:
+    s = re.sub(rb'[^A-Z2-7=]', b'', s.upper())
+    s += b'=' * (-len(s) % 8)
+    return base64.b32decode(s)
+
+
+def _hex(s: bytes) -> bytes:
+    s = re.sub(rb'(?i)0x|[^0-9a-f]', b'', s)
+    if len(s) % 2:
+        s = s[:-1]
+    return binascii.unhexlify(s)
+
+
+def _binary(s: bytes) -> bytes:
+    bits = re.sub(rb'[^01]', b'', s)
+    bits = bits[:len(bits) // 8 * 8]
+    if not bits:
+        raise ValueError('no bits')
+    return bytes(int(bits[i:i + 8], 2) for i in range(0, len(bits), 8))
+
+
+def _decimal(s: bytes) -> bytes:
+    nums = [int(n) for n in re.findall(rb'\d+', s)]
+    if not nums or any(n > 255 for n in nums):
+        raise ValueError('not byte-range decimals')
+    return bytes(nums)
+
+
+def _rot(s: bytes, n: int) -> bytes:
+    return codecs.encode(s.decode('latin1'), 'rot13').encode('latin1') if n == 13 else bytes(
+        (c - 65 + n) % 26 + 65 if 65 <= c <= 90 else
+        (c - 97 + n) % 26 + 97 if 97 <= c <= 122 else c for c in s)
+
+
+# Encodings worth recursing into: their output can itself be encoded again.
+NESTABLE = [
+    ('base64',  _b64),
+    ('base32',  _b32),
+    ('hex',     _hex),
+    ('base85',  lambda s: base64.b85decode(re.sub(rb'\s', b'', s))),
+    ('ascii85', lambda s: base64.a85decode(re.sub(rb'\s', b'', s))),
+    ('url',     lambda s: urllib.parse.unquote_to_bytes(s.decode('latin1'))),
+    ('binary',  _binary),
+    ('decimal', _decimal),
+    ('zlib',    zlib.decompress),
+    ('gzip',    lambda s: zlib.decompress(s, 47)),      # 47 = auto-detect gzip header
+]
+
+# Terminal transforms: substitution ciphers and reversal. Never recursed into, and only
+# reported when they actually reveal a flag — rot/reverse of printable text is always
+# printable, so showing them unconditionally buries the real answer in noise.
+def terminals(data: bytes, show_all: bool):
+    yield 'reversed', data[::-1]
+    if printable_ratio(data) > 0.9:
+        rots = range(1, 26) if show_all else (13,)
+        for n in rots:
+            try:
+                yield f'rot{n}', _rot(data, n)
+            except Exception:
+                continue
+
+
+def attempts(data: bytes):
+    """Yield (name, decoded) for every nestable codec that did not raise."""
+    for name, fn in NESTABLE:
+        try:
+            out = fn(data)
+        except Exception:
+            continue
+        if out and out != data:
+            yield name, out
+
+
+def render(name: str, out: bytes, depth: int, flagged: bool) -> None:
+    text = out.decode('latin1').rstrip('\n')
+    if len(text) > 400:
+        text = text[:400] + f'... (+{len(out) - 400} bytes)'
+    print(f'{"  " * depth}[{name}] {text}{"  <<< FLAG" if flagged else ""}')
+
+
+def walk(data: bytes, depth: int, maxdepth: int, show_all: bool, seen: set) -> bool:
+    """Decode one level. Returns True if a flag was found at or below this node.
+
+    A node that yields a flag is printed and NOT expanded further: every rot of a
+    flag is still regex-flag-shaped, so expanding a hit produces 25 fake siblings.
+    """
+    results = [(n, o) for n, o in attempts(data) if o not in seen]
+    for _, o in results:
+        seen.add(o)
+
+    hits = [(n, o) for n, o in results if STRICT.search(o)]
+    if hits:                                   # a flag here: show only these, stop
+        for n, o in hits:
+            render(n, o, depth, True)
+        return True
+
+    found = False
+    for n, o in results:
+        if printable_ratio(o) >= THRESHOLD or show_all:
+            render(n, o, depth, False)
+        if depth + 1 < maxdepth and walk(o, depth + 1, maxdepth, show_all, seen):
+            found = True
+
+    # nothing nested panned out — try the substitution ciphers on this level
+    for n, o in terminals(data, show_all):
+        if o in seen:
+            continue
+        seen.add(o)
+        if STRICT.search(o):
+            render(n, o, depth, True)
+            found = True
+        elif show_all:
+            render(n, o, depth, False)
+    return found
+
+
+def selftest() -> None:
+    assert _b64(b'ZmxhZ3toaX0=') == b'flag{hi}'
+    assert _b64(b'ZmxhZ3toaX0') == b'flag{hi}'            # missing padding
+    assert _b64(b'__79') == b'\xff\xfe\xfd'          # url-safe alphabet
+    assert _b32(b'MZWGCZ33NBUX2===') == b'flag{hi}'
+    assert _hex(b'666c61677b68697d') == b'flag{hi}'
+    assert _hex(b'66 6c 61 67 7b 68 69 7d') == b'flag{hi}'
+    assert _binary(b'01100110 01101100') == b'fl'
+    assert _decimal(b'102 108 97 103') == b'flag'
+    assert _rot(b'synt{uv}', 13) == b'flag{hi}'
+    assert _rot(b'IBM', 25) == b'HAL'
+    assert printable_ratio(b'abc') == 1.0 and printable_ratio(b'\x00\x01') == 0.0
+    assert STRICT.search(b'xx flag{a_b} yy').group() == b'flag{a_b}'
+    assert not STRICT.search(b'Cl_{bCPeeSoHOseLeHA}'), 'noise must not be marked'
+    # a two-layer blob must be found by recursion, not by a single pass
+    two = base64.b64encode(base64.b32encode(b'flag{nested}'))
+    assert not STRICT.search(_b64(two)) and STRICT.search(_b32(_b64(two)))
+    assert walk(two, 0, 3, False, set()), 'recursion must find a 2-layer flag'
+    # STRICT must not fire on a rotated flag — that false positive is why it exists
+    assert not STRICT.search(_rot(b'flag{x_y}', 13)), 'rotated flag must not be marked'
+    assert LOOSE.search(_rot(b'flag{x_y}', 13)), 'but it is still word{...} shaped'
+    assert STRICT.search(b'flag{x_y}')
+    assert dict(terminals(b'abc', False)).keys() == {'reversed', 'rot13'}
+    assert len(dict(terminals(b'abc', True))) == 26
+    print('decode: selftest ok')
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('blob', nargs='?', help='data to decode; omit to read stdin')
+    ap.add_argument('-f', '--file', help='read the blob from this file')
+    ap.add_argument('-d', '--depth', type=int, default=2, help='recursion depth (default 2)')
+    ap.add_argument('-a', '--all', action='store_true', help='show non-printable results too')
+    ap.add_argument('--selftest', action='store_true')
+    a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+    if a.file:
+        data = open(a.file, 'rb').read()
+    elif a.blob:
+        data = a.blob.encode()
+    else:
+        data = sys.stdin.buffer.read()
+    data = data.strip()
+    if not data:
+        sys.exit('no input')
+    walk(data, 0, max(1, a.depth), a.all, set())
+
+
+if __name__ == '__main__':
+    main()

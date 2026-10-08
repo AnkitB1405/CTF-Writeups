@@ -12,6 +12,10 @@ source ~/ctf-venv/bin/activate     # pwntools, z3 and the crypto libs live in th
 For what each tool *is* and when to reach for it, see [TOOLCHAIN.md](TOOLCHAIN.md); this file is
 the command reference. Install lines are in TOOLCHAIN.md too.
 
+The repo also ships five helper scripts in [`bin/`](../bin/) that wrap the most repetitive of
+what follows — `decode`, `pcaptri`, `binfirst`, `xorbrute`, `flaggrep`. See
+[SCRIPTS.md](SCRIPTS.md).
+
 A few quirks worth knowing before they cost you time:
 
 - **`pwn checksec <bin>`** replaces the standalone `checksec`. `pwn cyclic` and `pwn template`

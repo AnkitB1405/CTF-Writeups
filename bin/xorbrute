@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""xorbrute — recover XOR-encrypted data: single byte, short repeating key, or via a crib.
+
+Usage:
+  xorbrute -f blob.bin                 # single-byte (all 256) + repeating keys len 2-3
+  xorbrute -f blob.bin -k 5            # also brute keys up to length 5 (slow past 3)
+  xorbrute -f blob.bin -c 'flag{'      # crib: derive the key from known plaintext
+  xorbrute -f blob.bin -c 'flag{' -L 8 # crib with an assumed key length
+  echo -n 'hex...' | xorbrute --hex    # read hex from stdin instead of raw bytes
+
+Why three modes: exhaustive search is only tractable for very short keys. A crib needs no
+search at all — if you know any plaintext fragment, XOR it against the ciphertext at each
+offset and the key falls out.
+"""
+import argparse, binascii, itertools, re, string, sys
+
+# Two patterns on purpose:
+#   STRICT = a recognised CTF prefix. Only this earns a "<<< FLAG" marker, because a loose
+#            word{...} shape matches constantly in XOR/rot noise and the marker becomes useless.
+#   LOOSE  = any word{...}. Used only to nudge ranking, so a novel prefix still floats up.
+STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|layer8|cryovault|key|secret)'
+                    rb'\{[\x20-\x7e]{3,80}\}')
+LOOSE = re.compile(rb'\b[A-Za-z][A-Za-z0-9_]{1,11}\{[\x20-\x7e]{3,80}\}')
+PRINTABLE = set(bytes(string.printable, 'ascii'))
+# English-ish scoring: letter/space frequency. Enough to rank candidates, not to be clever.
+FREQ = {c: f for c, f in zip(b' etaoinshrdlcumwfgypbvkjxqz',
+                             [18, 10, 7.5, 7, 6.5, 6.3, 6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5,
+                              2.4, 2.3, 2, 1.8, 1.7, 1.5, 1.3, 1, .8, .5, .3, .2, .1])}
+
+
+def xor(data: bytes, key: bytes) -> bytes:
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+
+def printable_ratio(b: bytes) -> float:
+    return sum(c in PRINTABLE for c in b) / len(b) if b else 0.0
+
+
+def score(b: bytes) -> float:
+    """Higher = more English-looking. Used only to order candidates."""
+    return sum(FREQ.get(c, 0) for c in b.lower()) / max(len(b), 1)
+
+
+def single_byte(data: bytes, min_ratio: float):
+    """All 256 one-byte keys. Cheap and exhaustive, so always worth doing first."""
+    out = []
+    for k in range(256):
+        cand = xor(data, bytes([k]))
+        if printable_ratio(cand) >= min_ratio:
+            out.append((score(cand) + (1000 if STRICT.search(cand) else 50 if LOOSE.search(cand) else 0), bytes([k]), cand))
+    return sorted(out, reverse=True, key=lambda r: r[0])
+
+
+def brute_keys(data: bytes, maxlen: int, min_ratio: float):
+    """Exhaustive over printable-ASCII keys of length 2..maxlen.
+
+    ponytail: 95**n grows fast — len 3 is ~857k tries and fine, len 4 is ~81M and slow.
+    Use a crib instead of raising -k past 4.
+    """
+    alphabet = bytes(range(32, 127))
+    out = []
+    for n in range(2, maxlen + 1):
+        for key in itertools.product(alphabet, repeat=n):
+            cand = xor(data, bytes(key))
+            if STRICT.search(cand) or printable_ratio(cand) >= min_ratio:
+                out.append((score(cand) + (1000 if STRICT.search(cand) else 50 if LOOSE.search(cand) else 0),
+                            bytes(key), cand))
+    return sorted(out, reverse=True, key=lambda r: r[0])
+
+
+def from_crib(data: bytes, crib: bytes, keylen: int | None):
+    """Slide the crib along the ciphertext; XOR reveals key bytes at that alignment.
+
+    With a keylen, the fragment recovered at offset o gives key bytes at positions
+    (o..o+len(crib)) mod keylen, so the full key can be assembled when the crib is at
+    least as long as the key.
+    """
+    out = []
+    for off in range(len(data) - len(crib) + 1):
+        frag = xor(data[off:off + len(crib)], crib)      # candidate key material
+        if keylen:
+            if len(crib) < keylen:
+                # One alignment only reveals len(crib) key bytes. A shorter crib than the
+                # key cannot recover all of it, so say so rather than returning silently.
+                raise ValueError(
+                    f'crib is {len(crib)} bytes but key length {keylen} was assumed — '
+                    f'need a crib at least {keylen} bytes long, or drop -L')
+            key = bytearray(keylen)
+            for i, b in enumerate(frag):
+                key[(off + i) % keylen] = b
+            cand = xor(data, bytes(key))
+            if printable_ratio(cand) > 0.9:
+                out.append((score(cand) + (1000 if STRICT.search(cand) else 50 if LOOSE.search(cand) else 0),
+                            bytes(key), cand))
+        else:
+            # no length assumed: treat the fragment itself as a repeating key
+            for n in range(1, len(frag) + 1):
+                key = frag[:n]
+                cand = xor(data, key)
+                if STRICT.search(cand) or printable_ratio(cand) > 0.95:
+                    out.append((score(cand) + (1000 if STRICT.search(cand) else 50 if LOOSE.search(cand) else 0), key, cand))
+    seen, uniq = set(), []
+    for s, k, c in sorted(out, reverse=True, key=lambda r: r[0]):
+        if k not in seen:
+            seen.add(k)
+            uniq.append((s, k, c))
+    return uniq
+
+
+def report(results, label: str, limit: int) -> None:
+    if not results:
+        return
+    print(f'\n== {label} ==')
+    for s, key, cand in results[:limit]:
+        text = cand.decode('latin1').replace('\n', ' ')
+        if len(text) > 200:
+            text = text[:200] + '...'
+        hit = '  <<< FLAG' if STRICT.search(cand) else ''
+        print(f'key={key!r:<24} {text}{hit}')
+
+
+def selftest() -> None:
+    assert xor(b'abc', b'\x00') == b'abc'
+    assert xor(xor(b'hello world', b'K'), b'K') == b'hello world'
+    # single byte
+    ct = xor(b'flag{single_byte_xor}', b'\x42')
+    top = single_byte(ct, 0.9)
+    assert top and top[0][1] == b'\x42' and STRICT.search(top[0][2]), 'single-byte must rank first'
+    # repeating key, length 3
+    ct3 = xor(b'flag{repeating_key_three} and some filler text', b'KEY')
+    r3 = brute_keys(ct3, 3, 0.9)
+    assert any(k == b'KEY' for _, k, _ in r3[:5]), 'len-3 key must be in the top 5'
+    # crib with known length: the crib must be >= the key length
+    ct8 = xor(b'flag{crib_recovers_a_longer_key_here}', b'SECRET42')
+    r8 = from_crib(ct8, b'flag{cri', 8)
+    assert r8 and r8[0][1] == b'SECRET42', f'crib+keylen should give the key, got {r8[:1]}'
+    # a 4-byte key is recoverable from the usual 5-char crib
+    ct4 = from_crib(xor(b'flag{short_key_ok}', b'Key1'), b'flag{', 4)
+    assert ct4 and ct4[0][1] == b'Key1', f'4-byte key from flag{{ crib, got {ct4[:1]}'
+    # too-short crib must raise, not return nothing
+    try:
+        from_crib(ct8, b'fl', 8)
+        raise AssertionError('short crib should have raised')
+    except ValueError as e:
+        assert 'at least 8 bytes' in str(e)
+    # crib without a length, short key
+    ct2 = xor(b'flag{no_length_given_at_all}', b'Zq')
+    r2 = from_crib(ct2, b'flag{', None)
+    assert any(k == b'Zq' for _, k, _ in r2), 'crib alone should find a short key'
+    assert printable_ratio(b'\x00\x01') == 0.0 and printable_ratio(b'ab') == 1.0
+    assert score(b'the') > score(b'zqx')
+    # the marker must not fire on XOR noise that merely has word{...} shape
+    assert STRICT.search(b'here is flag{real_one}')
+    assert not STRICT.search(b'fVEgAWiTCl_{bCPeeSoHOseLeHA}'), 'noise must not be marked'
+    assert LOOSE.search(b'fVEgAWiTCl_{bCPeeSoHOseLeHA}'), 'but loose still ranks it'
+    print('xorbrute: selftest ok')
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('-f', '--file', help='ciphertext file; omit to read stdin')
+    ap.add_argument('--hex', action='store_true', help='input is hex, not raw bytes')
+    ap.add_argument('-k', '--keylen', type=int, default=3,
+                    help='brute repeating keys up to this length (default 3; 4+ is slow)')
+    ap.add_argument('-c', '--crib', help='known plaintext, e.g. "flag{"')
+    ap.add_argument('-L', '--assume-len', type=int, help='assumed key length, with --crib')
+    ap.add_argument('-r', '--ratio', type=float, default=0.9,
+                    help='minimum printable ratio to report (default 0.9)')
+    ap.add_argument('-n', '--limit', type=int, default=5, help='results per section (default 5)')
+    ap.add_argument('--selftest', action='store_true')
+    a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+
+    data = open(a.file, 'rb').read() if a.file else sys.stdin.buffer.read()
+    if a.hex:
+        data = binascii.unhexlify(re.sub(rb'[^0-9a-fA-F]', b'', data))
+    if not data:
+        sys.exit('no input')
+
+    if a.crib:
+        try:
+            crib_results = from_crib(data, a.crib.encode(), a.assume_len)
+        except ValueError as e:
+            sys.exit(f'xorbrute: {e}')
+        report(crib_results,
+               f'crib {a.crib!r}' + (f', key length {a.assume_len}' if a.assume_len else ''),
+               a.limit)
+        return
+    report(single_byte(data, a.ratio), 'single-byte keys', a.limit)
+    if a.keylen >= 2:
+        if a.keylen >= 4:
+            print(f'(brute-forcing length {a.keylen} over printable ASCII — '
+                  f'{95 ** a.keylen:,} keys, this will take a while)', file=sys.stderr)
+        report(brute_keys(data, a.keylen, a.ratio), f'repeating keys, length 2-{a.keylen}',
+               a.limit)
+
+
+if __name__ == '__main__':
+    main()

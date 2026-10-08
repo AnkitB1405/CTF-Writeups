@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""pcaptri — triage a pcap: protocol mix, top talkers, carved files, decoded payloads, flags.
+
+Usage:
+  pcaptri cap.pcap
+  pcaptri cap.pcap -o out/        # carve HTTP/SMB/TFTP objects into out/ (default: ./carved)
+  pcaptri cap.pcap --no-carve     # skip extraction, just report
+  pcaptri cap.pcap -n 20          # show more rows per section
+
+Order is deliberate: protocol hierarchy first, because it tells you which of the later
+sections is worth reading. A capture that is 90% DNS is a different problem from one that is
+90% HTTP.
+"""
+import argparse, base64, binascii, os, re, shutil, subprocess, sys
+
+STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|layer8|cryovault)'
+                    rb'\{[\x20-\x7e]{3,80}\}')
+
+
+def tshark(args: list[str], pcap: str) -> str:
+    r = subprocess.run(['tshark', '-r', pcap] + args,
+                       capture_output=True, text=True, errors='replace', timeout=300)
+    return r.stdout.rstrip()
+
+
+def section(title: str) -> None:
+    print(f'\n\033[1m── {title} ' + '─' * max(0, 66 - len(title)) + '\033[0m')
+
+
+def flags_in(data: bytes, where: str, found: dict) -> None:
+    """Record any flag in raw bytes, and in its base64/hex decoding."""
+    for m in STRICT.finditer(data):
+        found.setdefault(m.group(), set()).add(where)
+    for m in re.finditer(rb'[A-Za-z0-9+/]{16,}={0,2}', data):
+        chunk = m.group()
+        chunk = chunk[:len(chunk) // 4 * 4]
+        try:
+            dec = base64.b64decode(chunk, validate=False)
+        except Exception:
+            continue
+        for mm in STRICT.finditer(dec):
+            found.setdefault(mm.group(), set()).add(f'{where} (base64)')
+
+
+def hexfield_to_bytes(field: str) -> bytes:
+    """tshark -e data gives colon-or-bare hex; turn it into bytes."""
+    h = re.sub(r'[^0-9a-fA-F]', '', field)
+    return binascii.unhexlify(h[:len(h) // 2 * 2]) if h else b''
+
+
+def selftest() -> None:
+    assert hexfield_to_bytes('66:6c:61:67') == b'flag'
+    assert hexfield_to_bytes('666c6167') == b'flag'
+    assert hexfield_to_bytes('') == b''
+    assert hexfield_to_bytes('666c6') == b'fl', 'odd nibble must be dropped, not crash'
+    f = {}
+    flags_in(b'xx flag{raw_one} xx', 'tcp', f)
+    assert b'flag{raw_one}' in f
+    f = {}
+    flags_in(b'hdr ' + base64.b64encode(b'flag{b64_one}'), 'http', f)
+    assert b'flag{b64_one}' in f and 'base64' in list(f[b'flag{b64_one}'])[0]
+    f = {}
+    flags_in(b'nothing{} here', 'x', f)
+    assert not f, 'empty body must not match'
+    # DNS exfil: labels concatenated then base64-decoded must yield the flag
+    payload = base64.b64encode(b'flag{dns_exfil}').decode()
+    labels = [payload[i:i + 6] for i in range(0, len(payload), 6)]
+    joined = ''.join(labels).encode()
+    f = {}
+    for pad in range(4):
+        c = joined[:len(joined) - pad]
+        c += b'=' * (-len(c) % 4)
+        try:
+            flags_in(base64.b64decode(c, validate=False), 'dns', f)
+        except Exception:
+            pass
+    assert b'flag{dns_exfil}' in f, f'label reassembly must decode, got {f}'
+    print('pcaptri: selftest ok')
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('pcap', nargs='?')
+    ap.add_argument('-o', '--out', default='carved', help='carve directory (default ./carved)')
+    ap.add_argument('-n', '--rows', type=int, default=10, help='rows per section (default 10)')
+    ap.add_argument('--no-carve', action='store_true')
+    ap.add_argument('--selftest', action='store_true')
+    a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+    if not a.pcap or not os.path.isfile(a.pcap):
+        sys.exit('usage: pcaptri <file.pcap>')
+    if not shutil.which('tshark'):
+        sys.exit('pcaptri needs tshark: sudo apt install tshark')
+
+    found: dict[bytes, set] = {}
+
+    section('protocol hierarchy  (read this first)')
+    print(tshark(['-q', '-z', 'io,phs'], a.pcap))
+
+    section(f'top conversations  (first {a.rows})')
+    for proto in ('tcp', 'udp'):
+        out = tshark(['-q', '-z', f'conv,{proto}'], a.pcap)
+        rows = [l for l in out.splitlines() if '<->' in l][:a.rows]
+        if rows:
+            print(f'[{proto}]')
+            print('\n'.join('  ' + r.strip() for r in rows))
+
+    section('endpoints by bytes')
+    out = tshark(['-q', '-z', 'endpoints,ip'], a.pcap)
+    print('\n'.join(out.splitlines()[:a.rows + 4]) or '(none)')
+
+    section('HTTP requests')
+    http = tshark(['-Y', 'http.request', '-T', 'fields',
+                   '-e', 'http.request.method', '-e', 'http.host', '-e', 'http.request.uri'],
+                  a.pcap)
+    print('\n'.join('  ' + l for l in http.splitlines()[:a.rows * 2]) or '(none)')
+
+    section('DNS queries  (unique)')
+    dns = tshark(['-Y', 'dns.flags.response==0', '-T', 'fields', '-e', 'dns.qry.name'], a.pcap)
+    names = sorted({l.strip() for l in dns.splitlines() if l.strip()})
+    print('\n'.join('  ' + n for n in names[:a.rows * 2]) or '(none)')
+    if len(names) > 20:
+        print(f'  ... {len(names)} unique names')
+    # DNS exfiltration: data is smuggled out one label at a time, so the leftmost labels
+    # concatenated in capture order are often a base64/hex payload. Reassemble and decode.
+    if names:
+        order = [l.strip() for l in dns.splitlines() if l.strip()]   # capture order, not sorted
+        labels, seen = [], set()
+        for n in order:
+            first = n.split('.')[0]
+            if first not in seen:
+                seen.add(first)
+                labels.append(first)
+        joined = ''.join(labels).encode()
+        if len(joined) >= 8:
+            flags_in(joined, 'dns labels (raw)', found)
+            for pad in range(4):
+                chunk = joined[: len(joined) - pad]
+                chunk = chunk + b'=' * (-len(chunk) % 4)
+                try:
+                    flags_in(base64.b64decode(chunk, validate=False), 'dns labels (base64)', found)
+                except Exception:
+                    pass
+            try:
+                flags_in(binascii.unhexlify(re.sub(rb'[^0-9a-fA-F]', b'', joined)[:len(joined) // 2 * 2]),
+                         'dns labels (hex)', found)
+            except Exception:
+                pass
+
+    section('credentials / interesting plaintext')
+    creds = tshark(['-Y',
+                    'ftp.request.command or telnet or http.authorization or pop or imap',
+                    '-T', 'fields', '-e', 'frame.number', '-e', '_ws.col.Info'], a.pcap)
+    print('\n'.join('  ' + l for l in creds.splitlines()[:a.rows]) or '(none)')
+
+    if not a.no_carve:
+        section(f'carved objects -> {a.out}/')
+        os.makedirs(a.out, exist_ok=True)
+        total = 0
+        for kind in ('http', 'smb', 'tftp', 'imf', 'dicom'):
+            tshark(['--export-objects', f'{kind},{a.out}'], a.pcap)
+        for root, _, files in os.walk(a.out):
+            for fn in files:
+                path = os.path.join(root, fn)
+                total += 1
+                try:
+                    flags_in(open(path, 'rb').read(), f'carved:{fn}', found)
+                except OSError:
+                    pass
+        print(f'  {total} file(s) extracted' if total else '  (nothing carvable)')
+
+    section('payload scan')
+    # every packet's raw payload, hex -> bytes -> flag hunt, plus base64 inside payloads
+    for field in ('data.data', 'tcp.payload', 'udp.payload'):
+        out = tshark(['-T', 'fields', '-e', field], a.pcap)
+        for line in out.splitlines():
+            if line.strip():
+                flags_in(hexfield_to_bytes(line), field, found)
+    # and the file as a whole, which catches anything the dissectors did not reassemble
+    flags_in(open(a.pcap, 'rb').read(), 'raw pcap bytes', found)
+    print(f'  scanned payloads + raw file')
+
+    section('FLAGS')
+    if found:
+        for f, where in sorted(found.items()):
+            print(f'  {f.decode("latin1")}\n      from: {", ".join(sorted(where))}')
+    else:
+        print('  none found. Next: follow a stream by hand —')
+        print(f'    tshark -r {a.pcap} -z follow,tcp,ascii,0')
+        print(f'    grep -ra "flag" {a.out}/ 2>/dev/null')
+
+
+if __name__ == '__main__':
+    main()

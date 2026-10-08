@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""flaggrep — hunt flag-shaped strings across files and directories, including inside binaries.
+
+Usage:
+  flaggrep                        # current directory, recursive
+  flaggrep /path/to/chal           # a directory or a single file
+  flaggrep -p 'cryovault'          # add a prefix to the known list
+  flaggrep -e                       # also look for base64/hex-ENCODED flags
+  flaggrep -a                       # report any word{...}, not just known prefixes
+  flaggrep -u                       # UTF-16 too (Windows binaries)
+
+Why not just grep: this is binary-safe by default, searches several prefixes at once,
+dedupes, decodes base64/hex-wrapped flags that plain grep cannot see, and skips the huge
+directories (.git, node_modules) that make a recursive grep crawl.
+"""
+import argparse, base64, binascii, os, re, sys
+
+KNOWN = ['flag', 'ctf', 'pico', 'htb', 'thm', 'pes', 'layer8', 'cryovault']
+SKIP_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.cache'}
+MAX_BYTES = 256 * 1024 * 1024        # don't slurp a 10 GB disk image into RAM
+
+
+def patterns(prefixes, loose):
+    body = rb'\{[\x20-\x7e]{1,120}\}'
+    if loose:
+        return [re.compile(rb'\b[A-Za-z][A-Za-z0-9_]{1,15}' + body)]
+    alt = b'|'.join(re.escape(p.encode()) for p in prefixes)
+    return [re.compile(rb'(?i)\b(?:' + alt + rb')' + body)]
+
+
+def encoded_candidates(data: bytes, prefixes):
+    """Find flags that were base64- or hex-encoded before being stored.
+
+    A plain grep cannot see these: 'flag{' becomes 'ZmxhZ3s' or '666c61677b'. Rather than
+    guessing what each prefix looks like encoded — which depends on its byte alignment — just
+    locate every base64/hex-looking run and decode it. Fewer moving parts, and it also catches
+    prefixes we were never told about.
+    """
+    pat = patterns(prefixes, False)[0]
+    out = []
+
+    for m in re.finditer(rb'[A-Za-z0-9+/_-]{16,}={0,2}', data):
+        blob = m.group().replace(b'-', b'+').replace(b'_', b'/')
+        for off in range(4):                 # the run may not start on a 4-char boundary
+            chunk = blob[off:]
+            chunk = chunk[:len(chunk) // 4 * 4]
+            if len(chunk) < 8:
+                continue
+            try:
+                dec = base64.b64decode(chunk, validate=False)
+            except Exception:
+                continue
+            out += [('base64', mm.group()) for mm in pat.finditer(dec)]
+
+    for m in re.finditer(rb'(?:[0-9a-fA-F]{2}[\s:]?){8,}', data):
+        hexs = re.sub(rb'[^0-9a-fA-F]', b'', m.group())
+        for off in (0, 1):                   # odd-aligned hex happens
+            chunk = hexs[off:]
+            chunk = chunk[:len(chunk) // 2 * 2]
+            if len(chunk) < 16:
+                continue
+            try:
+                dec = binascii.unhexlify(chunk)
+            except Exception:
+                continue
+            out += [('hex', mm.group()) for mm in pat.finditer(dec)]
+    return out
+
+
+def scan(path: str, pats, prefixes, do_encoded: bool, utf16: bool):
+    try:
+        size = os.path.getsize(path)
+        if size > MAX_BYTES:
+            print(f'[skip] {path}: {size / 1e9:.1f} GB, over the size cap', file=sys.stderr)
+            return []
+        with open(path, 'rb') as fh:
+            data = fh.read()
+    except (OSError, PermissionError) as e:
+        print(f'[skip] {path}: {e}', file=sys.stderr)
+        return []
+
+    found = []
+    for pat in pats:
+        found += [('raw', m.group()) for m in pat.finditer(data)]
+        if utf16:
+            # UTF-16LE text looks like f\x00l\x00a\x00g\x00 — strip the nulls and re-scan
+            for variant in (data[::2], data[1::2]):
+                found += [('utf16', m.group()) for m in pat.finditer(variant)]
+    if do_encoded:
+        found += encoded_candidates(data, prefixes)
+    return found
+
+
+def walk_targets(targets):
+    for t in targets:
+        if os.path.isfile(t):
+            yield t
+        else:
+            for root, dirs, files in os.walk(t):
+                dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+                for f in files:
+                    yield os.path.join(root, f)
+
+
+def selftest() -> None:
+    import tempfile
+    pats = patterns(KNOWN, False)
+    assert pats[0].search(b'junk flag{hello} junk').group() == b'flag{hello}'
+    assert pats[0].search(b'PICO{Upper_Case}'), 'prefix match must be case-insensitive'
+    assert not pats[0].search(b'notaflag{x}'), r'\b must stop a mid-word match'
+    assert not pats[0].search(b'flag{}'), 'empty body is not a flag'
+    assert patterns(KNOWN, True)[0].search(b'weird{body_here}'), 'loose mode takes any prefix'
+    assert not pats[0].search(b'weird{body_here}'), 'strict mode does not'
+    with tempfile.TemporaryDirectory() as d:
+        # a flag embedded in binary noise, which is why this is not a text-mode grep
+        open(f'{d}/bin', 'wb').write(b'\x00\xff\x01' + b'flag{in_binary}' + b'\x00\xfe')
+        # base64-wrapped, invisible to a plain grep
+        open(f'{d}/b64', 'wb').write(b'prefix ' + base64.b64encode(b'flag{b64_wrapped}'))
+        # hex-wrapped
+        open(f'{d}/hex', 'wb').write(b'flag{hex_wrapped}'.hex().encode())
+        # UTF-16LE, as a Windows binary stores it
+        open(f'{d}/w16', 'wb').write(b'flag{utf16_here}'.decode().encode('utf-16le'))
+        os.makedirs(f'{d}/.git')
+        open(f'{d}/.git/x', 'wb').write(b'flag{should_be_skipped}')
+
+        got = {m for f in walk_targets([d]) for _, m in scan(f, pats, KNOWN, True, True)}
+        assert b'flag{in_binary}' in got, 'must read binary files'
+        assert b'flag{b64_wrapped}' in got, 'must decode base64-wrapped flags'
+        assert b'flag{hex_wrapped}' in got, 'must decode hex-wrapped flags'
+        assert b'flag{utf16_here}' in got, 'must handle UTF-16LE'
+        assert b'flag{should_be_skipped}' not in got, '.git must be skipped'
+    print('flaggrep: selftest ok')
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('targets', nargs='*', default=['.'], help='files/dirs (default: .)')
+    ap.add_argument('-p', '--prefix', action='append', default=[], help='extra flag prefix')
+    ap.add_argument('-e', '--encoded', action='store_true', help='also find base64/hex-wrapped')
+    ap.add_argument('-a', '--any', action='store_true', help='match any word{...}')
+    ap.add_argument('-u', '--utf16', action='store_true', help='also scan UTF-16LE')
+    ap.add_argument('--selftest', action='store_true')
+    a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+
+    prefixes = KNOWN + a.prefix
+    pats = patterns(prefixes, a.any)
+    hits = {}
+    for path in walk_targets(a.targets or ['.']):
+        for how, m in scan(path, pats, prefixes, a.encoded, a.utf16):
+            hits.setdefault(m, []).append((path, how))
+
+    if not hits:
+        print('no flags found', file=sys.stderr)
+        sys.exit(1)
+    for m, where in sorted(hits.items()):
+        path, how = where[0]
+        extra = f' (+{len(where) - 1} more)' if len(where) > 1 else ''
+        tag = '' if how == 'raw' else f' [{how}]'
+        print(f'{m.decode("latin1")}\n    {path}{tag}{extra}')
+
+
+if __name__ == '__main__':
+    main()

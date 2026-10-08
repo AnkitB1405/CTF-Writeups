@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""binfirst — one-screen first pass on a binary: file, protections, symbols, imports, strings.
+
+Usage:
+  binfirst ./chal
+  binfirst ./chal -s 60      # show more strings
+  binfirst ./chal --raw      # also print the full nm/strings output, unfiltered
+
+Runs the 30-second static checks in one shot and annotates the imports, because what a
+binary *imports* usually tells you more than its disassembly: `strtoul` means input is
+parsed as a number, so no hex digest can ever match; `strcmp` means one breakpoint leaks
+both sides of the comparison.
+"""
+import argparse, hashlib, os, re, shutil, subprocess, sys
+
+# What an imported symbol implies. Lifted from the static-analysis notes; the point is to
+# turn a wall of symbol names into a short list of "so therefore...".
+TELLS = [
+    (r'^(strtoul|strtol|atoi|atol|sscanf)$',
+     'input parsed as a NUMBER — a hex digest can never match'),
+    (r'^(fgets|getline)$', 'line-based read — keeps the trailing newline'),
+    (r'^gets$', 'gets() — unbounded read, classic stack overflow'),
+    (r'^(strcpy|strcat|sprintf)$', 'unbounded copy — overflow candidate'),
+    (r'^(memcpy|strncpy|snprintf)$', 'bounded copy — check the length source'),
+    (r'^(printf|fprintf|vprintf)$', 'if the format string is user-controlled: format-string bug'),
+    (r'^(system|execve|execl|popen)$', 'command execution present — a win target'),
+    (r'^(strcmp|strncmp|memcmp)$', 'comparison is a LIBRARY CALL — break on it, read both args'),
+    (r'^strcspn$', 'idiomatic newline strip: buf[strcspn(buf,"\\n")] = 0'),
+    (r'^(isalpha|isdigit|isalnum|tolower|toupper)$',
+     'input is filtered/transformed BEFORE comparison'),
+    (r'^(fopen|open|fread)$', 'reads a file at runtime — check strings for the filename'),
+    (r'^calloc$', 'zero-filled allocation — explains runs of zeros in a leak'),
+    (r'^(malloc|free|realloc)$', 'heap in play'),
+    (r'^(rand|srand)$', 'PRNG — if seeded with time(), it is predictable'),
+    (r'^time$', 'often the PRNG seed'),
+    (r'^(ptrace)$', 'anti-debug check — may need patching out'),
+    (r'^(alarm|signal)$', 'timeout/alarm — may kill a slow exploit'),
+    (r'^mmap$', 'manual mapping — possibly an RWX page'),
+    (r'^(SHA|MD5|EVP_|AES_|crypt)', 'standard crypto in use'),
+]
+INTERESTING_STR = re.compile(
+    r'(?i)(flag|pass|secret|key|token|/bin/sh|sh$|\.txt|\.so|http|admin|debug|'
+    r'GCC:|clang|GLIBC_|\.c$|\.cpp$|%s|%d|%p|%n)')
+
+
+def run(cmd: list[str]) -> str:
+    """Run a tool, return stdout, never raise if the tool is missing or unhappy."""
+    if not shutil.which(cmd[0]):
+        return f'[{cmd[0]} not installed]'
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
+                           errors='replace')
+        return (r.stdout or r.stderr).rstrip()
+    except subprocess.TimeoutExpired:
+        return f'[{cmd[0]} timed out]'
+
+
+def section(title: str) -> None:
+    print(f'\n\033[1m── {title} ' + '─' * max(0, 66 - len(title)) + '\033[0m')
+
+
+def checksec(path: str) -> str:
+    """Prefer pwntools; fall back to parsing readelf so this works outside the venv."""
+    for pwn in ('pwn', os.path.expanduser('~/ctf-venv/bin/pwn')):
+        if shutil.which(pwn) or os.path.exists(pwn):
+            out = run([pwn, 'checksec', path])
+            if 'RELRO' in out:
+                return '\n'.join(l.strip() for l in out.splitlines() if ':' in l)
+    hdr, dyn = run(['readelf', '-hlWd', path]), run(['readelf', '-sW', path])
+    rel = ('Full RELRO' if 'BIND_NOW' in hdr or 'FLAGS_1' in hdr and 'NOW' in hdr
+           else 'Partial RELRO' if 'GNU_RELRO' in hdr else 'No RELRO')
+    return '\n'.join([
+        f'Type:    {"PIE" if "DYN (" in hdr else "no PIE (fixed addresses)"}',
+        f'NX:      {"enabled" if "GNU_STACK" in hdr and "RWE" not in hdr else "DISABLED"}',
+        f'Canary:  {"found" if "__stack_chk_fail" in dyn else "not found"}',
+        f'RELRO:   {rel}',
+        '(readelf fallback — `pwn checksec` is more reliable)',
+    ])
+
+
+def imports(path: str) -> list[str]:
+    """Undefined symbols = functions the binary calls but does not define, i.e. its libc use.
+
+    `nm -Du` prints them as "    U fgets@GLIBC_2.2.5"; readelf is the fallback for when nm
+    has no symbol table to work with.
+    """
+    out = run(['nm', '-Du', path])
+    syms = re.findall(r'^\s*U\s+([A-Za-z_]\w*)', out, re.M)
+    if not syms:
+        rel = run(['readelf', '-sW', path])
+        syms = re.findall(r'\bUND\s+([A-Za-z_]\w*)', rel)
+    # glibc exports some of these as __isoc23_strtoul / __isoc99_sscanf; strip the prefix so
+    # the TELLS patterns match the plain name.
+    return sorted({re.sub(r'^__iso[a-z0-9]+_', '', s.split('@')[0]) for s in syms})
+
+
+def annotate(imports: list[str]) -> list[str]:
+    notes, seen = [], set()
+    for sym in imports:
+        for rx, msg in TELLS:
+            if re.search(rx, sym) and msg not in seen:
+                seen.add(msg)
+                notes.append(f'  {sym:<18} {msg}')
+    return notes
+
+
+def selftest() -> None:
+    assert run(['definitely-not-a-real-binary-xyz']).startswith('[')
+    assert annotate(['strtoul'])[0].strip().startswith('strtoul')
+    assert 'NUMBER' in annotate(['strtoul'])[0]
+    assert 'break on it' in annotate(['strcmp'])[0]
+    assert annotate(['no_such_symbol']) == []
+    # each tell must be a valid regex and must not double-report
+    for rx, _ in TELLS:
+        re.compile(rx)
+    assert len(annotate(['strcmp', 'strncmp'])) == 1, 'one message per distinct tell'
+    assert INTERESTING_STR.search('flag.txt') and not INTERESTING_STR.search('zzzz')
+    # imports() must find real libc symbols in a real binary
+    syms = imports('/bin/ls')
+    assert syms, 'should find undefined symbols in /bin/ls'
+    assert any(s in syms for s in ('malloc', 'free', 'strlen')), syms[:10]
+    assert all('@' not in s for s in syms), 'GLIBC version suffixes must be stripped'
+    assert all(not s.startswith('__isoc') for s in syms), '__isocNN_ prefix must be stripped'
+    # end to end on a real system binary
+    out = checksec('/bin/true')
+    assert 'RELRO' in out or 'readelf' in out, out
+    print('binfirst: selftest ok')
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('binary', nargs='?')
+    ap.add_argument('-s', '--strings', type=int, default=30, help='interesting strings to show')
+    ap.add_argument('--raw', action='store_true', help='also dump full nm/strings output')
+    ap.add_argument('--selftest', action='store_true')
+    a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+    if not a.binary or not os.path.isfile(a.binary):
+        sys.exit('usage: binfirst <binary>')
+    b = a.binary
+
+    section('identity')
+    print(run(['file', b]))
+    data = open(b, 'rb').read()
+    print(f'size:   {len(data):,} bytes')
+    print(f'sha256: {hashlib.sha256(data).hexdigest()}')
+    stripped = 'not stripped' not in run(['file', b])
+    if stripped:
+        print('\n!! STRIPPED — no symbol names. Expect sub_xxxx in a decompiler.')
+
+    section('protections')
+    print(checksec(b))
+
+    section('imports  (undefined symbols = what it calls out to)')
+    syms = imports(b)
+    print(', '.join(syms) if syms else '(none found — static binary, or stripped)')
+    notes = annotate(syms)
+    if notes:
+        print('\nwhat that implies:')
+        print('\n'.join(notes))
+
+    section('local functions  (nm)')
+    local = run(['nm', b])
+    if local.startswith('[') or 'no symbols' in local:
+        print('(no symbol table)')
+    else:
+        funcs = re.findall(r'^\S*\s*[TtWw]\s+(\S+)$', local, re.M)
+        funcs = [f for f in dict.fromkeys(funcs) if not f.startswith('_')]
+        print(', '.join(funcs[:40]) or '(none)')
+        mangled = [f for f in funcs if f.startswith('_Z')]
+        if mangled and shutil.which('c++filt'):
+            print('\ndemangled C++:')
+            print(run(['c++filt'] + mangled[:15]))
+
+    section(f'interesting strings  (top {a.strings})')
+    allstr = run(['strings', '-n', '4', b]).splitlines()
+    hits = [s for s in allstr if INTERESTING_STR.search(s)]
+    for s in hits[:a.strings]:
+        print(f'  {s[:150]}')
+    print(f'  ({len(hits)} interesting of {len(allstr)} total — `strings {b}` for all)')
+
+    if a.raw:
+        section('raw nm'); print(local)
+        section('raw strings'); print('\n'.join(allstr))
+
+    section('suggested next steps')
+    print(f'  ltrace ./{os.path.basename(b)}           # library calls — often leaks the compare')
+    print(f'  strace -f ./{os.path.basename(b)} 2>&1 | grep -E "open|read"')
+    print(f'  ghidra                                  # decompile; import {b}')
+    if 'strcmp' in syms or 'strncmp' in syms or 'memcmp' in syms:
+        print(f'  gdb ./{os.path.basename(b)} -ex "b strcmp" -ex run    # then: x/s $rdi, x/s $rsi')
+
+
+if __name__ == '__main__':
+    main()
