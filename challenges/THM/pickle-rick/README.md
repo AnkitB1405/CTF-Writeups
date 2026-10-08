@@ -5,7 +5,7 @@
 | **Event** | TryHackMe |
 | **Category** | Web → Linux Privilege Escalation |
 | **Date** | 2026-08-30 |
-| **Status** | 🟡 In progress — 1 of 3 ingredients. Box hit its runtime limit; resuming after cooldown |
+| **Status** | ✅ Solved — all 3 ingredients |
 | **Vulnerabilities** | [Denylist Filter Bypass](../../../notes/concepts/denylist-filter-bypass.md) → [sudo Misconfiguration](../../../notes/concepts/sudo-privesc.md) |
 
 ## Challenge
@@ -17,7 +17,7 @@ web app with a command panel.
 
 Credentials in an HTML comment and `robots.txt` → login to a command panel → `cat` was
 denylisted but `tac` wasn't → `sudo -l` showed `(ALL) NOPASSWD: ALL` for `www-data`, which is
-unrestricted passwordless root.
+unrestricted passwordless root, and root access gave up the remaining two ingredients.
 
 ## 🔴 The biggest mistake — and it wasn't technical
 
@@ -48,7 +48,7 @@ responders: latching onto the first plausible explanation and stopping.
 | 5 | Ingredient 1 | `ls` → filename visible → read with `tac` (`cat` and `head` both filtered) |
 | 6 | `whoami` → `www-data` | Unprivileged service account |
 | 7 | `sudo -l` → `(ALL) NOPASSWD: ALL` | **Full passwordless root.** Game over |
-| 8 | Ingredients 2 & 3 | ⏳ Pending — `sudo ls -laR /home/` and `sudo ls -la /root/` |
+| 8 | Ingredients 2 & 3 | ✅ Read as root — `sudo ls -laR /home/`, `sudo ls -la /root/`, then `sudo tac <path>` |
 
 ## 🔧 The dirb lesson — why the first scan missed the login page
 
@@ -89,15 +89,24 @@ invoking `sudo` at all is the anomaly.
 
 → Full note: [Privilege Escalation — sudo Misconfiguration](../../../notes/concepts/sudo-privesc.md)
 
-## To finish on resume
+## Finishing it as root
+
+With `(ALL) NOPASSWD: ALL` confirmed, the remaining two ingredients were a matter of
+re-running enumeration with the privilege wrapper in front:
 
 ```bash
-sudo ls -laR /home/
-sudo ls -la /root/
-sudo tac "/full/path/to/file"
+sudo ls -laR /home/          # every user's home tree, dotfiles included
+sudo ls -la /root/           # normally closed to www-data — the point of escalating
+sudo tac "<path to file>"    # sudo FIRST, and tac because cat is still filtered
 ```
 
-Absolute paths — `cd` won't persist between submissions. Quote any filename containing spaces.
+Two things that matter here and bite people:
+
+- **Absolute paths.** `cd` does not persist between submissions — each one is a fresh process.
+- **The privilege wrapper goes first.** `sudo tac file`, never `tac sudo file`. And escalating
+  does not bypass the web app's input filter: those are separate layers, so it stays `sudo tac`,
+  not `sudo cat`.
+
 See [Linux Enumeration from a Web Shell](../../../notes/workflows/linux-enum-web-shell.md).
 
 ## Takeaways

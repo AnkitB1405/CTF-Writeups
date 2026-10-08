@@ -9,7 +9,7 @@ cost me the most time.
 
 ![Platform](https://img.shields.io/badge/platform-Kali_Linux-557C94?logo=kalilinux&logoColor=white)
 ![Focus](https://img.shields.io/badge/focus-web_·_crypto_·_forensics_·_rev_·_pwn-blue)
-![Writeups](https://img.shields.io/badge/writeups-3-green)
+![Writeups](https://img.shields.io/badge/writeups-3_solved-brightgreen)
 ![Notes](https://img.shields.io/badge/notes-10-orange)
 
 </div>
@@ -82,7 +82,7 @@ teaches nothing six months later; the reason I spent 90 minutes on the wrong the
 | Challenge | Platform | Category | Vulnerability | Status |
 |---|---|---|---|---|
 | [Authentication Anywhere](challenges/THM/authentication-anywhere/README.md) | TryHackMe | Web | IDOR | ✅ |
-| [Pickle Rick](challenges/THM/pickle-rick/README.md) | TryHackMe | Web → Linux | Denylist bypass → sudo privesc | 🟡 1/3 |
+| [Pickle Rick](challenges/THM/pickle-rick/README.md) | TryHackMe | Web → Linux | Denylist bypass → sudo privesc | ✅ |
 | [heartbleed](challenges/picoCTF/heartbleed/README.md) | picoCTF | Pwn / RE | Buffer over-read → RE | ✅ |
 
 ## Notes

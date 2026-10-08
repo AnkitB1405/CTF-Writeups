@@ -6,7 +6,7 @@ are what stop me repeating them.
 | Challenge | Platform | Category | Vulnerability | Status |
 |---|---|---|---|---|
 | [Authentication Anywhere](THM/authentication-anywhere/README.md) | TryHackMe | Web | IDOR | ✅ |
-| [Pickle Rick](THM/pickle-rick/README.md) | TryHackMe | Web → Linux | Denylist bypass → sudo privesc | 🟡 1/3 |
+| [Pickle Rick](THM/pickle-rick/README.md) | TryHackMe | Web → Linux | Denylist bypass → sudo privesc | ✅ |
 | [heartbleed](picoCTF/heartbleed/README.md) | picoCTF | Pwn / RE | Buffer over-read → RE | ✅ |
 
 ## Layout
