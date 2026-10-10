@@ -8,6 +8,7 @@ are what stop me repeating them.
 | [Authentication Anywhere](THM/authentication-anywhere/README.md) | TryHackMe | Web | IDOR | ✅ |
 | [Pickle Rick](THM/pickle-rick/README.md) | TryHackMe | Web → Linux | Denylist bypass → sudo privesc | ✅ |
 | [heartbleed](picoCTF/heartbleed/README.md) | picoCTF | Pwn / RE | Buffer over-read → RE | ✅ |
+| [write-hole](Cryovault-2026/forensics/write-hole/README.md) | Cryovault 2026 | Forensics | RAID5 write hole → journal key recovery | ✅ |
 
 ## Layout
 

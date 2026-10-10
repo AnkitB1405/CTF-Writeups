@@ -23,6 +23,7 @@ means I've used the thing but haven't understood it yet.
 | **sudo privesc** | `sudo -l` reveals what you may run as another user; `(ALL) NOPASSWD: ALL` on a service account is unrestricted passwordless root | 🟢 | [sudo-privesc.md](concepts/sudo-privesc.md) |
 | **robots.txt** | A public, unenforced file asking crawlers to skip paths — which makes it a curated list of what someone considered sensitive | 🟢 | [robots-txt.md](concepts/robots-txt.md) |
 | **Heartbleed** | The program trusts an attacker-supplied length instead of measuring the data, and hands back whatever memory sat next to the input | 🟢 | [heartbleed-buffer-over-read.md](concepts/heartbleed-buffer-over-read.md) |
+| **RAID5 write hole** | A stripe update is two independent writes (data, parity) with no atomicity between them — crash in the middle and the array knows the stripe disagrees but not which member is stale; the new data survives inside the parity chunk | 🟢 | [raid5-write-hole.md](concepts/raid5-write-hole.md) |
 
 ## Workflows
 
