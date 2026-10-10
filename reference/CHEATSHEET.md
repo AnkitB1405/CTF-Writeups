@@ -220,6 +220,8 @@ print(b''.join(p[Raw].load for p in pkts if ICMP in p and Raw in p))
 | `binwalk` | Same idea, better on firmware. |
 | `vol` (volatility3) | Memory dump analysis — processes, cmdlines, hashes. |
 | `strings` | Brute-force first pass on any image. Never skip it. |
+| `fls` / `icat` | Sleuthkit — list and extract files including deleted ones. |
+| `sqlite3` | Read the databases inside the image (browser history, chat apps). |
 
 ```bash
 foremost -i disk.dd -o out/                     # carve by signature
@@ -235,6 +237,15 @@ vol -f mem.raw windows.filescan | grep -i flag
 vol -f mem.raw windows.hashdump                 # NTLM hashes -> hashcat
 vol -f mem.raw windows.dumpfiles --pid 1234
 vol -f mem.raw linux.bash                       # bash history (linux)
+
+# sleuthkit — deleted files still have inodes
+fls -r -d disk.dd                               # -d = deleted entries only
+icat disk.dd 1234 > recovered.bin               # extract by inode
+
+# sqlite databases found in the image
+sqlite3 History '.tables'
+sqlite3 History '.dump' | grep -i flag
+strings History | grep -i flag                  # deleted rows survive in the freelist
 ```
 
 ---
@@ -249,6 +260,8 @@ vol -f mem.raw linux.bash                       # bash history (linux)
 | `exiftool` | Metadata comments. |
 | `tesseract` | OCR — read text out of an image. |
 | `convert` | ImageMagick — flip planes, adjust levels to reveal hidden text. |
+| `pngcheck` | Names the corrupt chunk when a PNG won't open. |
+| `zbarimg` | Decode a QR code or barcode out of an image. |
 
 ```bash
 zsteg -a image.png                              # try ALL LSB combos
@@ -261,8 +274,12 @@ tesseract image.png stdout                      # OCR
 convert image.png -separate channel_%d.png      # split RGB planes
 convert image.png -auto-level -contrast-stretch 0 out.png
 
+pngcheck -v image.png                           # chunk list + CRC check
+zbarimg image.png                               # QR / barcode
+
 # audio stego -> look at the spectrogram in Audacity, flags get drawn in it
-# PNG that won't open: check the IHDR dimensions, they're often corrupted on purpose
+# PNG that won't open: pngcheck names the bad chunk. IHDR width/height are the
+#   usual sabotage; fix the bytes with xxd -r, the CRC can stay wrong.
 ```
 
 ---
@@ -318,11 +335,13 @@ The `rockyou-NN.txt` files already present are truncated-by-length subsets (NN =
 | `gdb`+`pwndbg` | Dynamic — watch it run, inspect memory at a breakpoint. |
 | `ltrace` | Library calls. Catches `strcmp(input, "password")` instantly. |
 | `strace` | Syscalls. Shows what files it opens. |
+| `upx -d` | Unpack a UPX-packed binary before you try to read it. |
 
 ```bash
 # before anything else
 file chal; checksec chal         # (pwn checksec chal — pwntools provides it)
-strings chal | grep -iE 'flag|pass|key'
+strings chal | grep -iE 'flag|pass|key|UPX'
+upx -d chal                      # if packed — a disassembler only sees the stub otherwise
 ltrace ./chal                    # often reveals the comparison outright
 strace -f ./chal 2>&1 | grep -E 'open|read'
 
@@ -372,6 +391,8 @@ Java `.jar`/`.class` → `jadx` or `cfr`. Android `.apk` → `apktool d` then `j
 | `ROPgadget` | Find gadgets for a ROP chain. |
 | `one_gadget` | Find a one-shot `execve("/bin/sh")` inside libc. |
 | `pwn checksec` | Which protections are on — decides your whole approach. |
+| `patchelf` | Point the binary at the libc the challenge shipped. |
+| `rlwrap nc` | Makes a dumb reverse shell usable — history, arrows, tab. |
 
 ```bash
 pwn checksec ./chal              # NX? PIE? Canary? RELRO?
@@ -381,6 +402,12 @@ one_gadget /lib/x86_64-linux-gnu/libc.so.6
 pwn cyclic 200                   # pattern to find the offset
 pwn cyclic -l 0x6161616c         # look up offset from crash value
 pwn template ./chal              # GENERATE AN EXPLOIT SKELETON — use this
+
+# the challenge shipped its own libc + loader: run against THEIRS, not yours,
+# or every offset and one_gadget address you compute is wrong
+patchelf --set-interpreter ./ld-2.31.so --set-rpath . ./chal
+ldd ./chal                       # confirm it now resolves to the provided libc
+# alternative: the matching docker image (20.04=2.31, 22.04=2.35, 24.04=2.39)
 ```
 
 **Exploit skeleton:**

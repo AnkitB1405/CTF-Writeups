@@ -10,7 +10,11 @@ This is the orientation layer — *which* tool and *why*. For the commands thems
 # the broad strokes, on Kali or Debian
 sudo apt install -y john hashcat tshark radare2 ghidra gobuster ffuf sqlmap burpsuite \
   nmap binwalk foremost exiftool steghide stegseek fcrackzip pdfcrack tesseract-ocr \
-  gdb ltrace strace socat netcat-openbsd jq p7zip-full imagemagick poppler-utils
+  gdb ltrace strace socat netcat-openbsd ncat jq p7zip-full imagemagick poppler-utils \
+  sqlite3 pngcheck zbar-tools rlwrap upx-ucl patchelf qpdf hydra
+
+# only if the event has a mobile category — skip otherwise, they are large
+sudo apt install -y apktool jadx
 
 # the Python side belongs in a venv, not system site-packages
 python3 -m venv ~/ctf-venv && source ~/ctf-venv/bin/activate
@@ -122,6 +126,10 @@ flag is, because whatever was typed is still in memory.
 
 **`strings` on the raw image** — crude and frequently sufficient. Try it before anything else.
 
+**`sqlite3`** — disk images are full of SQLite databases: browser history and cookies, chat apps,
+mail clients. `.tables` then `.dump` reads one without the application. Deleted rows often
+survive in the freelist, so `strings` on the `.db` file is worth a look too.
+
 ## 6. Steganography
 
 **`zsteg`** — tests PNG/BMP least-significant-bit encodings. `-a` tries every combination. First
@@ -134,6 +142,14 @@ passphrase first; challenges often leave it blank.
 follow-up when `steghide` says the password is wrong.
 
 **`tesseract`** — OCR. Pulls text out of an image, for flags only ever rendered as pixels.
+
+**`pngcheck`** — validates a PNG chunk by chunk and verifies every CRC. When an image won't open,
+this names the broken chunk instead of leaving you guessing: a wrong IHDR width, a bad CRC, or
+extra data hidden after IEND. `-v` lists all chunks, which is how you spot a non-standard one
+carrying the payload.
+
+**`zbarimg`** — decodes QR codes and barcodes out of an image file. Misc challenges like to
+render a flag as a QR, sometimes split across several.
 
 **`convert`** (ImageMagick) — image manipulation. Splitting colour planes and stretching contrast
 reveals text hidden in one channel or in near-identical shades.
@@ -171,6 +187,10 @@ extract it once up front. The `rockyou-NN.txt` files are length-capped subsets, 
 faster first pass.
 
 ## 8. Reverse engineering
+
+**`upx`** — a packer. If `file` says "UPX compressed" or `strings` shows `UPX!`, the real code is
+compressed and a disassembler sees only the unpacker stub. `upx -d ./bin` restores it. Always
+check for this before concluding a binary is obfuscated.
 
 **`ghidra`** — the NSA's decompiler. Turns machine code back into readable C-like pseudocode.
 *The primary RE tool*: you read logic instead of assembly. On Kali the launcher is **`ghidra`**,
@@ -214,6 +234,11 @@ to execute code when the stack is non-executable.
 **`one_gadget`** — finds a single address inside libc that spawns a shell by itself, turning a
 ret2libc exploit into a one-address write when its register constraints are satisfiable.
 
+**`patchelf`** — rewrites an ELF's interpreter and library path. Pwn challenges ship the exact
+libc they run, and your local one almost certainly differs; `patchelf --set-interpreter
+./ld-2.31.so --set-rpath . ./chal` makes the binary run against theirs, so your offsets and
+one_gadget addresses are the real ones. The alternative is a matching Docker image (§10).
+
 **`capstone` / `unicorn`** — a disassembly engine and a CPU emulator, as libraries. For decoding
 or *running* instructions programmatically rather than in a debugger.
 
@@ -253,9 +278,12 @@ untrusted samples. Pull the images *before* the event — bandwidth on the day i
 ## 12. Shell utilities worth naming
 
 `jq` JSON querying · `7z` / `zip` / `unzip` archives · `hexdump` / `od` hex views when xxd is
-absent · `pdftotext` text out of PDFs · `socat` a more capable netcat · `nc` raw TCP, the usual
-way to reach a challenge service · `tmux` keep sessions alive and split panes · `radiff2` binary
-diffing.
+absent · `pdftotext` text out of PDFs · `qpdf --decrypt --qdf` unpack a PDF's object structure
+when `pdftotext` returns nothing · `socat` a more capable netcat · `nc` raw TCP, the usual way to
+reach a challenge service · `ncat` the nmap build, adds `--ssl` for TLS services · `rlwrap nc ...`
+gives a reverse shell arrow keys, history and tab, and costs nothing to habitually prefix ·
+`hydra` brute-forces a network login (ssh, ftp, http forms) when a service wants credentials ·
+`tmux` keep sessions alive and split panes · `radiff2` binary diffing.
 
 ---
 
