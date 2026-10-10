@@ -1,5 +1,10 @@
 """Emulator for phantom's bytecode VM, recovered from the handlers at 0xa6f8..0xb1c6.
 
+`ks` must be the 256-byte S-box the VM builds in its stack frame at +0xae0 followed
+by the four 36-byte position permutations at +0xbe0/+0xc04/+0xc28/+0xc4c. The frame
+also holds a *different* permutation of 0..255 at +0x9e0 (the key-material copy);
+using that one makes op 0x14 diverge on its first execution.
+
 Per-instruction derived operands (computed by the dispatcher at 0xa5e5):
   i    = (R0 + 3*R1 + a) % 36              operand index
   j    = (R0 + 3*R1 + b) % 36, bumped by 1 if it collides with i
