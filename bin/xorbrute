@@ -18,7 +18,7 @@ import argparse, binascii, itertools, re, string, sys
 #   STRICT = a recognised CTF prefix. Only this earns a "<<< FLAG" marker, because a loose
 #            word{...} shape matches constantly in XOR/rot noise and the marker becomes useless.
 #   LOOSE  = any word{...}. Used only to nudge ranking, so a novel prefix still floats up.
-STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|layer8|cryovault|key|secret)'
+STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|isfcr|layer8|cryovault|key|secret)'
                     rb'\{[\x20-\x7e]{3,80}\}')
 LOOSE = re.compile(rb'\b[A-Za-z][A-Za-z0-9_]{1,11}\{[\x20-\x7e]{3,80}\}')
 PRINTABLE = set(bytes(string.printable, 'ascii'))

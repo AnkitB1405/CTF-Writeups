@@ -1,0 +1,263 @@
+== 16 VM-program preimages (one per entry of the table at 0xb8190) ==
+  A[ 0] accepted=True  isfcr{gr347_by73c0d3_w0rk_bu7_7h1s_1s_f4k3}
+  A[ 1] accepted=True  isfcr{n1c3_vm_3mul470r_f4k3_fl4g_7ry_4g41n}
+  A[ 2] accepted=True  isfcr{c0ngr47s_0n_7h3_vm_7h1s_fl4g_1s_f4k3}
+  A[ 3] accepted=True  isfcr{7h47_w4s_r34l_w0rk_4nd_s71ll_4_d3c0y}
+  A[ 4] accepted=True  isfcr{7h47_w4s_r34l_w0rk_7h1s_fl4g_1s_f4k3}
+  A[ 5] accepted=True  isfcr{gr347_by73c0d3_w0rk_bu7_17_1s_4_7r4p}
+  A[ 6] accepted=True  isfcr{gr347_by73c0d3_w0rk_wr0ng_fl4g_4g41n}
+  A[ 7] accepted=True  isfcr{c0ngr47s_0n_7h3_vm_4nd_s71ll_4_d3c0y}
+  A[ 8] accepted=True  isfcr{7h3_vm_s4ys_h3ll0_s71ll_n07_7h3_fl4g}
+  A[ 9] accepted=True  isfcr{y0ur_7r4c3_1s_g00d_7h1s_fl4g_1s_f4k3}
+  A[10] accepted=True  isfcr{gr347_by73c0d3_w0rk_bu7_7h1s_1s_f4k3}
+  A[11] accepted=True  isfcr{gr347_by73c0d3_w0rk_4nd_7h1s_1s_f4k3}
+  A[12] accepted=True  isfcr{y0ur_1nv3rs3_w0rks_7h1s_fl4g_1s_f4k3}
+  A[13] accepted=True  isfcr{y0ur_7r4c3_1s_g00d_4nd_s71ll_4_d3c0y}
+  A[14] accepted=True  isfcr{y0u_s0lv3d_7h3_vm_s71ll_n07_7h3_fl4g}
+  A[15] accepted=True  isfcr{y0ur_1nv3rs3_w0rks_4nd_s71ll_4_d3c0y}
+
+== 11 blobs decoded by the helper at 0xb3e0 ==
+  blob[ 0] isfcr{y0u_d3cryp73d_4_f4k3_n07_4_s3cr37}
+  blob[ 1] isfcr{c0ngr47s_7h47_w4s_us3l3ss_4nd_f4k3}
+  blob[ 2] isfcr{n1c3_s7471c_4n4lys1s_s71ll_4_7r4p}
+  blob[ 3] isfcr{7h3_m4s73r_s3cr37_1s_f4k3_surpr1s3}
+  blob[ 4] isfcr{wr0ng_fl4g_fr0m_7h3_3m3rg3ncy_cupb04rd}
+  blob[ 5] isfcr{y0u_unm4sk3d_4_d3c0y_k33p_7ry1ng}
+  blob[ 6] isfcr{f4k3_fl4g_fr0m_7h3_b4ckup_70_7h3_b4ckup}
+  blob[ 7] isfcr{7h1s_h1dd3n_70k3n_1s_n07_7h3_fl4g}
+  blob[ 8] isfcr{wr0ng_fl4g_y0u_r3v3rs3d_7h3_wr0ng_func710n}
+  blob[ 9] isfcr{f4k3_fl4g_s34l3d_f0r_c0m3d1c_3ff3c7}
+  blob[10] isfcr{n0p3_7h3_d33p3s7_dr4w3r_c0n741ns_4_7r4p}
+
+== 231 plaintext decoys in .rodata ==
+  isfcr{
+  isfcr{4m4z1ng_w0rk_s71ll_7h3_wr0ng_fl4g}
+  isfcr{4n07h3r_f4k3_fl4g_l0l}
+  isfcr{7h1s_1s_4_d3c0y_n07_4_s0lu710n}
+  isfcr{7h1s_1s_f4k3_3v3n_0n_7u3sd4ys}
+  isfcr{7h1s_1s_n07_4_w1nn1ng_subm1ss10n}
+  isfcr{7h1s_1s_n07_7h3_fl4g}
+  isfcr{7h1s_7r4p_1s_0p3n_f0r_bus1n3ss}
+  isfcr{7h1s_7r4p_w34rs_4_fl4g_c0s7um3}
+  isfcr{7h1s_f4k3_h4s_n0_h1dd3n_m34n1ng}
+  isfcr{7h1s_fl4g_1s_4_7r4p}
+  isfcr{7h1s_fl4g_1s_f4k3_by_d3s1gn}
+  isfcr{7h3_r34l_fl4g_1s_n07_h3r3}
+  isfcr{7r4p_d373c73d_pl34s3_c0n71nu3}
+  isfcr{7r4p_fl4g_d0_n07_subm17}
+  isfcr{c0ngr47s_7h47_buff3r_w4s_4_7r4p}
+  isfcr{c0ngr47ul4710ns_y0u_f0und_4_f4k3}
+  isfcr{d1d_y0u_r34lly_7h1nk_7h1s_7r4p_w4s_17}
+  isfcr{d3c0mp1l3_h4rd3r_s71ll_wr0ng}
+  isfcr{f4k3_4s_4_pl4s71c_7r0phy}
+  isfcr{f4k3_fl4g_1_4m_runn1ng_0u7_0f_74un7s}
+  isfcr{f4k3_fl4g_17_w4s_3ncryp73d_f0r_dr4m4}
+  isfcr{f4k3_fl4g_1_c4nn07_m4k3_7h1s_m0r3_3xpl1c17}
+  isfcr{f4k3_fl4g_1ns1d3_4_pr3m1um_7r4p}
+  isfcr{f4k3_fl4g_3v3n_7h3_und3rsc0r3s_4r3_s1gh1ng}
+  isfcr{f4k3_fl4g_4dd_m0r3_br34kp01n7s_l3ss_h0p3}
+  isfcr{f4k3_fl4g_4_l1m173d_3d1710n_0f_f41lur3}
+  isfcr{f4k3_fl4g_4_m4s73rcl4ss_1n_w4s73d_cl1cks}
+  isfcr{f4k3_fl4g_4s_s33n_0n_y0ur_73rm1n4l}
+  isfcr{f4k3_fl4g_4_surpr1s3_70_4bs0lu73ly_n0b0dy}
+  isfcr{f4k3_fl4g_4w4rd_f0r_m0s7_0p71m1sm}
+  isfcr{f4k3_fl4g_7h1s_0n3_h4s_n0_s3cr37_7w1s7}
+  isfcr{f4k3_fl4g_7h1s_1s_g3771ng_4wkw4rd}
+  isfcr{f4k3_fl4g_7h3_4rch1v3_k33ps_n0_pr0m1s3s}
+  isfcr{f4k3_fl4g_7h3_br4c3s_4r3_71r3d_0f_y0u}
+  isfcr{f4k3_fl4g_7h3_cfg_1s_n07_4_7r34sur3_m4p}
+  isfcr{f4k3_fl4g_7h3_ch3cksum_w4s_h0n3s7_4b0u7_n07h1ng}
+  isfcr{f4k3_fl4g_7h3_h1n7_1s_7h3_w0rd_f4k3}
+  isfcr{f4k3_fl4g_7h3_r34l_pr1z3_1s_m0r3_w0rk}
+  isfcr{f4k3_fl4g_7h3_s74ck_1s_n07_y0ur_3n3my}
+  isfcr{f4k3_fl4g_b3h1nd_4n07h3r_f4k3_fl4g}
+  isfcr{f4k3_fl4g_b3h1nd_4_v3ry_s3r10us_ch3cksum}
+  isfcr{f4k3_fl4g_b4773r13s_n07_1nclud3d}
+  isfcr{f4k3_fl4g_c0m3s_w17h_1m4g1n4ry_p01n7s}
+  isfcr{f4k3_fl4g_c3r71f13d_unh3lpful}
+  isfcr{f4k3_fl4g_f0r_7h3_d1sc3rn1ng_0p71m1s7}
+  isfcr{f4k3_fl4g_f0r_d1spl4y_0nly}
+  isfcr{f4k3_fl4g_fr0m_4_c0nv1nc1ng_l00kup_74bl3}
+  isfcr{f4k3_fl4g_fr0m_7h3_b4rg41n_b1n}
+  isfcr{f4k3_fl4g_fr0m_7h3_s3cr37_s3cr37_c0mp4r7m3n7}
+  isfcr{f4k3_fl4g_fr3sh_fr0m_7h3_f4c70ry}
+  isfcr{f4k3_fl4g_fr3shly_unp4ck3d_4nd_s71ll_us3l3ss}
+  isfcr{f4k3_fl4g_g0_r34d_7h3_1ns7ruc710n_d3c0d3r}
+  isfcr{f4k3_fl4g_h1dd3n_1n_pl41n_s1gh7_0n_purp0s3}
+  isfcr{f4k3_fl4g_h4ndcr4f73d_f0r_y0ur_d1s4pp01n7m3n7}
+  isfcr{f4k3_fl4g_h4ndl3_w17h_d0ub7}
+  isfcr{f4k3_fl4g_l1v3s_1n_r0d474_r3n7_fr33}
+  isfcr{f4k3_fl4g_n0_r3funds}
+  isfcr{f4k3_fl4g_n0w_w17h_m0r3_f4ls3_c0nf1d3nc3}
+  isfcr{f4k3_fl4g_pl34s3_r3cycl3}
+  isfcr{f4k3_fl4g_pl34s3_s70p_7rus71ng_func710n_n4m3s}
+  isfcr{f4k3_fl4g_r34d_7h3_0p3r4nds_700}
+  isfcr{f4k3_fl4g_r4r3_c0ll3c71bl3_z3r0_v4lu3}
+  isfcr{f4k3_fl4g_s7r41gh7_fr0m_7h3_d3c0y_b1n}
+  isfcr{f4k3_fl4g_sp0ns0r3d_by_f4ls3_h0p3}
+  isfcr{f4k3_fl4g_unl0ck3d_w17h_r34l_3ff0r7}
+  isfcr{f4k3_fl4g_w17h_3x7r4_c0nf1d3nc3}
+  isfcr{f4k3_fl4g_w17h_4_pr3m1um_d1s4pp01n7m3n7}
+  isfcr{f4k3_fl4g_w17h_n0_w4rr4n7y}
+  isfcr{f4k3_fl4g_wh47_4_sh0ck1ng_7w1s7}
+  isfcr{f4k3_fl4g_y0ur_1nv3rs3_1s_p3rf3c7ly_us3l3ss}
+  isfcr{f4k3_fl4g_y0ur_3mul470r_n33ds_4_purp0s3}
+  isfcr{f4k3_fl4g_y0ur_c0ll3c710n_n33ds_4_sh3lf}
+  isfcr{f4k3_fl4g_y0ur_cl1pb04rd_1s_full_0f_l13s}
+  isfcr{f4k3_fl4g_y0ur_d1s4ss3mbl3r_s4ys_h3ll0}
+  isfcr{f4k3_fl4g_y0ur_d3c0mp1l3r_1s_n07_4_s0lv3r}
+  isfcr{f4k3_fl4g_y0ur_p4713nc3_h4s_m37_my_k3yb04rd}
+  isfcr{f4k3_fl4g_y37_4n07h3r_w4s73_0f_4_g00d_br4c3}
+  isfcr{g0_b4ck_70_gh1dr4_wr0ng_fl4g}
+  isfcr{h0w_m4ny_f4k3_fl4gs_d0_y0u_n33d}
+  isfcr{k33p_7ry1ng_wr0ng_4nsw3r}
+  isfcr{k33p_7ry1ng_y0u_f0und_4_d3c0y}
+  isfcr{n07_3v3n_cl0s3}
+  isfcr{n07_4_pr1z3_jus7_4_pr4nk}
+  isfcr{n07_4_s0lu710n_jus7_4_d1s7r4c710n}
+  isfcr{n07_4_s3cr37_jus7_4_r3d_h3rr1ng}
+  isfcr{n07_7h3_fl4g_3v3n_1n_d3bug_m0d3}
+  isfcr{n07_7h3_fl4g_3v3n_4f73r_b4s364}
+  isfcr{n07_7h3_fl4g_3v3n_w17h_7h3_r1gh7_3nd14nn3ss}
+  isfcr{n07_7h3_fl4g_7h1s_s3cr37_1s_1n73rn4lly_f4k3}
+  isfcr{n07_7h3_fl4g_7h3_4u7h0r_pl4n73d_7h1s}
+  isfcr{n07_7h3_fl4g_7h3_h1dd3n_h1n7_1s_4_74un7}
+  isfcr{n07_7h3_fl4g_7h3_m4g1c_by73s_l13d}
+  isfcr{n07_7h3_fl4g_7h3_m4sk_w4s_4_d1s7r4c710n}
+  isfcr{n07_7h3_fl4g_7h3_vm_h4s_r3c31p7s}
+  isfcr{n07_7h3_fl4g_7h3_w4rn1ng_1s_l173r4lly_h3r3}
+  isfcr{n07_7h3_fl4g_7h4nks_f0r_pl4y1ng}
+  isfcr{n07_7h3_fl4g_7ry_4_d474_fl0w_gr4ph}
+  isfcr{n07_7h3_fl4g_7ry_s0m37h1ng_7h47_1s_n07_f4k3}
+  isfcr{n07_7h3_fl4g_7ry_und3rs74nd1ng_7h3_vm}
+  isfcr{n07_7h3_fl4g_bu7_17_h4s_p3rs0n4l17y}
+  isfcr{n07_7h3_fl4g_bu7_73ll_y0ur_fr13nds}
+  isfcr{n07_7h3_fl4g_bu7_l0v3ly_3ff0r7}
+  isfcr{n07_7h3_fl4g_bu7_n1c3_scr33nsh07}
+  isfcr{n07_7h3_fl4g_bu7_y0ur_m0us3_w0rk3d}
+  isfcr{n07_7h3_fl4g_ch3ck_7h3_c4ll_gr4ph}
+  isfcr{n07_7h3_fl4g_ch3ck_by73_0rd3r}
+  isfcr{n07_7h3_fl4g_pl34s3_c0nsul7_7h3_w0rd_n07}
+  isfcr{n07_7h3_fl4g_pl34s3_h0ld_y0ur_4ppl4us3}
+  isfcr{n07_7h3_fl4g_pl34s3_r34d_7h3_74un7}
+  isfcr{n07_7h3_fl4g_r34d_7h47_4g41n}
+  isfcr{n07_7h3_fl4g_r3g1s73rs_h4v3_07h3r_pl4ns}
+  isfcr{n07_7h3_fl4g_r3l0c4710ns_4r3_n07_w1sh3s}
+  isfcr{n07_7h3_fl4g_s0_cl0s3_70_4_74un7}
+  isfcr{n07_7h3_fl4g_w3_h4v3_b33n_0v3r_7h1s}
+  isfcr{n07_7h3_fl4g_y0u_4r3_l00k1ng_f0r}
+  isfcr{n07_7h3_fl4g_y0u_c4n_s70p_4sk1ng_7h1s_s7r1ng}
+  isfcr{n07_7h3_fl4g_y0ur_c0nf1d3nc3_w4s_cu73}
+  isfcr{n07_7h3_fl4g_y0ur_cl1pb04rd_d3s3rv3s_b3773r}
+  isfcr{n07_7h3_fl4g_y0ur_d3c0d3r_w0rk3d_7h0ugh}
+  isfcr{n07_7h3_fl4g_y3s_1_4m_sur3}
+  isfcr{n07_7h3_k3y_70_4ny7h1ng}
+  isfcr{n07_7h3_s3cr37_y0u_0rd3r3d}
+  isfcr{n07_y0ur_71ck37_70_v1c70ry}
+  isfcr{n0p3_0n3_m0r3_d3c0y_w1ll_n07_f1x_17}
+  isfcr{n0p3_1_700_h4v3_h34rd_0f_gr3p}
+  isfcr{n0p3_4g41n_4nd_4g41n_4nd_4g41n}
+  isfcr{n0p3_4_s7r1ng_1s_n07_4_pr00f}
+  isfcr{n0p3_7h1s_1s_f4k3}
+  isfcr{n0p3_7h1s_70k3n_1s_n07_v4l1d_h3r3}
+  isfcr{n0p3_7h1s_c3r71f1c473_c3r71f13s_4_d3c0y}
+  isfcr{n0p3_7h1s_l4y3r_0nly_c0n741ns_4_d3c0y}
+  isfcr{n0p3_7h1s_m4s73r_s3cr37_1s_4_d3c0y}
+  isfcr{n0p3_7h1s_w4s_n07_7h3_l1v3_74rg37}
+  isfcr{n0p3_7h3_3m3rg3ncy_4cc3ss_1s_f4k3_700}
+  isfcr{n0p3_7h3_4nsw3r_1s_3ls3wh3r3}
+  isfcr{n0p3_7h3_4u7h0r_c4n_4ls0_us3_s7r1ngs}
+  isfcr{n0p3_7h3_7u70r14l_1s_s71ll_runn1ng}
+  isfcr{n0p3_7h3_br4c3s_4r3_n07_4_gu4r4n733}
+  isfcr{n0p3_7h3_br4c3s_d0_n07_h3lp}
+  isfcr{n0p3_7h3_f1n1sh_l1n3_m0v3d}
+  isfcr{n0p3_7h3_h1dd3n_s3c710n_1s_4_7r4p}
+  isfcr{n0p3_7h3_jump_74bl3_1s_n07_7h3_4nsw3r}
+  isfcr{n0p3_7h3_n3x7_c0py_p4s73_w1ll_n07_h3lp}
+  isfcr{n0p3_7h3_pr37713s7_func710n_1s_4_7r4p}
+  isfcr{n0p3_7h3_sb0x_d03s_n07_l0v3_y0u}
+  isfcr{n0p3_7h3_un1v3rs3_1s_n07_7h47_g3n3r0us}
+  isfcr{n0p3_7h47_4ddr3ss_c0n741ns_4_d3c0y}
+  isfcr{n0p3_7h47_c0mp4r3_1s_4_d3c0y}
+  isfcr{n0p3_7h47_w4s_4ls0_4_7r4p}
+  isfcr{n0p3_7h47_w4s_n07_4_sp33drun}
+  isfcr{n0p3_7h47_x0r_w4s_jus7_4_7r4p}
+  isfcr{n0p3_7ry_7h3_4c7u4l_pr0gr4m}
+  isfcr{n0p3_n0_p01n7s_und3r_7h1s_r0ck}
+  isfcr{n0p3_s74r1ng_h4rd3r_d03s_n07_m4k3_17_r34l}
+  isfcr{n0p3_succ3ss_w4s_n07_1n_7h3_budg37}
+  isfcr{n0p3_y0u_4r3_c0ll3c71ng_d1s4pp01n7m3n7s}
+  isfcr{n0p3_y0u_4r3_s71ll_1n_7h3_d3c0y_41sl3}
+  isfcr{n0p3_y0u_c4nn07_n3g071473_w17h_4_d3c0y}
+  isfcr{n0p3_y0u_h4v3_unl0ck3d_m0r3_7ry1ng}
+  isfcr{n0p3_y0ur_luck_n33ds_4_p47ch}
+  isfcr{n0p3_y0ur_s34rch_1s_n07_0v3r}
+  isfcr{n0p3_y0ur_v1c70ry_1s_p3nd1ng}
+  isfcr{n1c3_7ry_bu7_s71ll_wr0ng}
+  isfcr{n1c3_d3cryp710n_s71ll_f4k3}
+  isfcr{n1c3_sh0r7cu7_70_7h3_wr0ng_4nsw3r}
+  isfcr{n3x7_fl4g_1s_r34l_jus7_k1dd1ng_f4k3}
+  isfcr{r34d_7h3_b1n4ry_7h1s_fl4g_1s_f4k3}
+  isfcr{s70p_us1ng_s7r1ngs_7h1s_1s_f4k3}
+  isfcr{s71ll_h3r3_s71ll_7h3_wr0ng_fl4g}
+  isfcr{wr0ng_4nsw3r_1n_f4ncy_br4c3s}
+  isfcr{wr0ng_4nsw3r_3xc3ll3n7_7yp1ng_7h0ugh}
+  isfcr{wr0ng_4nsw3r_7ry_4g41n_ch4mp10n}
+  isfcr{wr0ng_4nsw3r_b0ld_s7r473gy_fr13nd}
+  isfcr{wr0ng_4nsw3r_b3773r_luck_n3x7_l00p}
+  isfcr{wr0ng_4nsw3r_d3l1v3r3d_w17h_c0nf3771}
+  isfcr{wr0ng_4nsw3r_pl34s3_4cc3p7_7h1s_v1r7u4l_c00k13}
+  isfcr{wr0ng_d00r_s4m3_d1s4pp01n7m3n7}
+  isfcr{wr0ng_fl4g_3v3n_y0ur_c47_kn0ws}
+  isfcr{wr0ng_fl4g_4_p47ch_1s_n07_4n_4nsw3r}
+  isfcr{wr0ng_fl4g_74k3_4_br347h_4nd_r3v3rs3}
+  isfcr{wr0ng_fl4g_7h1s_1s_n07_4_l0773ry}
+  isfcr{wr0ng_fl4g_7h3_34s73r_3gg_1s_4ll_sh3ll}
+  isfcr{wr0ng_fl4g_7h3_b4ckup_k3y_1s_4_7r4p}
+  isfcr{wr0ng_fl4g_7h3_cr0wd_g03s_m1ld}
+  isfcr{wr0ng_fl4g_7h3_d3f1n1710n_h4s_n07_ch4ng3d}
+  isfcr{wr0ng_fl4g_7h3_f1n4l_f1n4l_f1n4l_0n3_1s_f4k3}
+  isfcr{wr0ng_fl4g_7h3_l3g4cy_v3r1f13r_1s_r371r3d}
+  isfcr{wr0ng_fl4g_7h3_p3rmu74710n_1s_l4ugh1ng}
+  isfcr{wr0ng_fl4g_7h3_pl07_7h1ck3ns_v3ry_sl0wly}
+  isfcr{wr0ng_fl4g_7h3_pr0gr4m_h4s_m0r3_p4713nc3_7h4n_m3}
+  isfcr{wr0ng_fl4g_7h3_r3j3c710n_1s_p3rs0n4l_70_7h3s3_by73s}
+  isfcr{wr0ng_fl4g_7h3_s3rv3r_1s_n07_c0nfus3d}
+  isfcr{wr0ng_fl4g_7h3_succ3ss_s7r1ng_pr0v3s_n07h1ng}
+  isfcr{wr0ng_fl4g_7h47_subm17_bu770n_n33ds_4_br34k}
+  isfcr{wr0ng_fl4g_7h47_w4s_7h3_d3m0_s3cr37}
+  isfcr{wr0ng_fl4g_7r4c3_7h3_l1v3_p47h}
+  isfcr{wr0ng_fl4g_bu7_y0u_f0und_7h3_h1dd3n_r00m}
+  isfcr{wr0ng_fl4g_buddy}
+  isfcr{wr0ng_fl4g_c0ngr47ul4710ns_0n_7h3_wr0ng_m1l3s70n3}
+  isfcr{wr0ng_fl4g_ch3ck_y0ur_3xp3c74710ns}
+  isfcr{wr0ng_fl4g_d0_n07_fr4m3_17}
+  isfcr{wr0ng_fl4g_d0_y0u_3v3n_l1f7_1r}
+  isfcr{wr0ng_fl4g_d33p_s70r4g3_sh4ll0w_7ru7h}
+  isfcr{wr0ng_fl4g_d3c0d3d_succ3ssfully_subm1773d_unsucc3ssfully}
+  isfcr{wr0ng_fl4g_f0ll0w_7h3_4c7u4l_r37urn_v4lu3}
+  isfcr{wr0ng_fl4g_f0ll0w_7h3_cr0ss_r3f3r3nc3s}
+  isfcr{wr0ng_fl4g_f1v3_s74rs_f0r_3n7hus14sm}
+  isfcr{wr0ng_fl4g_fr13ndly_r3m1nd3r}
+  isfcr{wr0ng_fl4g_g0_dr1nk_w473r_4nd_7ry_4g41n}
+  isfcr{wr0ng_fl4g_g0ld_s74r_f0r_c0py_p4s73}
+  isfcr{wr0ng_fl4g_h0w_1s_7h1s_s71ll_surpr1s1ng}
+  isfcr{wr0ng_fl4g_k33p_y0ur_r3c31p7}
+  isfcr{wr0ng_fl4g_pl34s3_s70p_pr0p0s1ng}
+  isfcr{wr0ng_fl4g_r37urn_70_s3nd3r}
+  isfcr{wr0ng_fl4g_r3c0v3r3d_fr0m_4_f4k3_v4ul7}
+  isfcr{wr0ng_fl4g_s1gn3d_by_7h3_d3c0y_d3p4r7m3n7}
+  isfcr{wr0ng_fl4g_s4m3_s70ry_d1ff3r3n7_by73s}
+  isfcr{wr0ng_fl4g_s7471c_4n4lys1s_c4ll3d_17_w4n7s_y0u_b4ck}
+  isfcr{wr0ng_fl4g_s74nd1ng_0v4710n_4nyw4y}
+  isfcr{wr0ng_fl4g_sm4ll_w0rld_b1g_f41lur3}
+  isfcr{wr0ng_fl4g_such_br4c3s_much_w0w}
+  isfcr{wr0ng_fl4g_symb0ls_w0uld_n07_s4v3_y0u}
+  isfcr{wr0ng_fl4g_w17h_4_g00d_47717ud3}
+  isfcr{wr0ng_fl4g_w47ch_7h3_f1n4l_br4nch}
+  isfcr{wr0ng_fl4g_y0ur_br34kp01n7_1s_700_34rly}
+  isfcr{wr0ng_fl4g_y0ur_p3rs1s73nc3_1s_m1spl4c3d}
+  isfcr{wr0ng_fl4g_y0ur_subm17_bu770n_1s_f1n3}
+  isfcr{wr0ng_fl4g_y0u_s0lv3d_7h3_d3c0y_c0rr3c7ly}
+  isfcr{wr0ng_fl4g_z3r0_p01n7s}
+  isfcr{y0ur_f4k3_fl4g_c0ll3c710n_1s_1mpr3ss1v3}

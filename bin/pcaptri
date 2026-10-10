@@ -13,7 +13,7 @@ sections is worth reading. A capture that is 90% DNS is a different problem from
 """
 import argparse, base64, binascii, os, re, shutil, subprocess, sys
 
-STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|layer8|cryovault)'
+STRICT = re.compile(rb'(?i)\b(flag|ctf|pico|htb|thm|pes|isfcr|layer8|cryovault)'
                     rb'\{[\x20-\x7e]{3,80}\}')
 
 

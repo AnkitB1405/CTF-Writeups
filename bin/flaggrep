@@ -15,7 +15,7 @@ directories (.git, node_modules) that make a recursive grep crawl.
 """
 import argparse, base64, binascii, os, re, sys
 
-KNOWN = ['flag', 'ctf', 'pico', 'htb', 'thm', 'pes', 'layer8', 'cryovault']
+KNOWN = ['flag', 'ctf', 'pico', 'htb', 'thm', 'pes', 'isfcr', 'layer8', 'cryovault']
 SKIP_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.cache'}
 MAX_BYTES = 256 * 1024 * 1024        # don't slurp a 10 GB disk image into RAM
 

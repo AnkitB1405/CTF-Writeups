@@ -24,3 +24,6 @@ __pycache__/
 .venv/
 
 !writeups/**/exploit.py
+
+# live challenge handouts — never publish these
+hackathon/
