@@ -1,0 +1,7 @@
+Boreal-7 / evidence bag 09
+The LAN recorder clock was maintained externally; the gateway clock was not.
+The service bridge image came from the same gateway, before the update.
+A neighboring gateway was online during the incident.
+The EEPROM programmer read the entire chip, including the second commit area.
+The maintenance file is complete. The old recovery bank was not used.
+No live device, broker, credentials, or external infrastructure remains.

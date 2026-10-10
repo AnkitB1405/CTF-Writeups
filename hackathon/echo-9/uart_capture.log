@@ -1,0 +1,12 @@
+[service bridge rev2; capture begins after loss of carrier]
+ROM 3.11 / ECHO-9 / core CM4 / load=08004000
+UID[2]=50ef5798 UID[0]=b89886c3 UID[1]=a43a255f
+OTP: UID readable; KEY aperture 1fff7800 excluded from service readout
+reset_status=00000005
+retention: feed_ticks=00001ee9 tx_last=00000013 rtc_step=00000025
+nv: read 4096 bytes; bridge transaction 0021 completed
+rtc: unix display 1970-01-01T00:00:37Z (wall source unavailable)
+boot: bridge transaction 002b completed
+uplink: tx class 0031, application clock rebased
+maintenance: manifest generation 3 accepted; diagnostic section pending
+[capture ends]
